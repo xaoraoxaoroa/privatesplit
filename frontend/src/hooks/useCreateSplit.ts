@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react';
-import { PROGRAM_ID } from '../utils/constants';
-import { TESTNET_API } from '../utils/constants';
+import { TransactionOptions } from '@provablehq/aleo-types';
+import { PROGRAM_ID, TESTNET_API } from '../utils/constants';
 import { creditsToMicro } from '../utils/format';
-import { generateSalt, getSplitIdFromMapping, formatAleoInput } from '../utils/aleo-utils';
+import { generateSalt, getSplitIdFromMapping } from '../utils/aleo-utils';
 import { useSplitStore, useUIStore } from '../store/splitStore';
 import { api } from '../services/api';
 import type { Split } from '../types/split';
@@ -40,25 +40,36 @@ export function useCreateSplit() {
       addLog(`Participants: ${params.participantCount}`, 'info');
       addLog(`Salt: ${salt.slice(0, 20)}...`, 'info');
 
-      // Prepare Leo inputs
-      const inputs = [
-        formatAleoInput(microAmount, 'u64'),
-        formatAleoInput(params.participantCount, 'u8'),
-        formatAleoInput(salt, 'field'),
+      // Prepare inputs — exactly matching Leo function signature:
+      // create_split(total: u64, count: u8, salt: field)
+      const inputs: string[] = [
+        `${microAmount}u64`,
+        `${params.participantCount}u8`,
+        salt,
       ];
 
-      addLog('Requesting transaction execution...', 'system');
+      addLog(`Inputs: [${inputs.map(i => i.slice(0, 30)).join(', ')}]`, 'info');
 
-      // Execute the create_split transition
-      const txResult = await executeTransaction({
+      // Build transaction matching NullPay's exact pattern
+      const transaction: TransactionOptions = {
         program: PROGRAM_ID,
         function: 'create_split',
-        inputs,
-        fee: 0.5,
-      });
+        inputs: inputs,
+        fee: 100_000,
+        privateFee: false,
+      };
 
-      const txId = txResult?.transactionId;
-      let finalTxId = txId || '';
+      addLog('Requesting transaction execution...', 'system');
+      console.log('PrivateSplit TX payload:', JSON.stringify(transaction));
+
+      // Execute — this calls Shield Wallet's executeTransaction
+      let txId = '';
+      const result = await executeTransaction(transaction);
+      if (result && result.transactionId) {
+        txId = result.transactionId;
+      }
+
+      let finalTxId = txId;
       addLog(`Transaction submitted: ${txId}`, 'success');
 
       // Poll for confirmation using wallet adapter (more reliable than API)
@@ -242,6 +253,7 @@ export function useCreateSplit() {
       const msg = err?.message || 'Failed to create split';
       setError(msg);
       addLog(`Error: ${msg}`, 'error');
+      console.error('PrivateSplit create_split error:', err);
       return null;
     } finally {
       setLoading(false);

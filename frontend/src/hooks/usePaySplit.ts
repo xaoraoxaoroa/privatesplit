@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react';
+import { TransactionOptions } from '@provablehq/aleo-types';
 import { PROGRAM_ID } from '../utils/constants';
 import { getSplitStatus, getSplitIdFromMapping, pollTransaction } from '../utils/aleo-utils';
 import { useUIStore } from '../store/splitStore';
@@ -183,12 +184,16 @@ export function usePaySplit() {
 
       addLog(`Inputs prepared: record=${recordInput.slice(0, 40)}...`, 'info');
 
-      const txResult = await executeTransaction({
+      const transaction: TransactionOptions = {
         program: PROGRAM_ID,
         function: 'pay_debt',
-        inputs,
-        fee: 0.5,
-      });
+        inputs: inputs,
+        fee: 100_000,
+        privateFee: false,
+      };
+
+      console.log('PrivateSplit pay_debt payload:', JSON.stringify(transaction));
+      const txResult = await executeTransaction(transaction);
 
       const resultTxId = txResult?.transactionId;
       setTxId(resultTxId || null);

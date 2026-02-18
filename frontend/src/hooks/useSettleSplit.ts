@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react';
+import { TransactionOptions } from '@provablehq/aleo-types';
 import { PROGRAM_ID } from '../utils/constants';
 import { pollTransaction } from '../utils/aleo-utils';
 import { useSplitStore, useUIStore } from '../store/splitStore';
@@ -51,12 +52,16 @@ export function useSettleSplit() {
       // record selection through its UI — pass what we have
       const inputs: string[] = splitRecordInput ? [splitRecordInput] : [];
 
-      const txResult = await executeTransaction({
+      const transaction: TransactionOptions = {
         program: PROGRAM_ID,
         function: 'settle_split',
-        inputs,
-        fee: 0.3,
-      });
+        inputs: inputs,
+        fee: 100_000,
+        privateFee: false,
+      };
+
+      console.log('PrivateSplit settle_split payload:', JSON.stringify(transaction));
+      const txResult = await executeTransaction(transaction);
 
       const txId = txResult?.transactionId;
       addLog(`Settle transaction submitted: ${txId}`, 'success');
