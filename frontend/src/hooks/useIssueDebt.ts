@@ -76,7 +76,7 @@ export function useIssueDebt() {
         privateFee: false,
       };
 
-      console.log('PrivateSplit issue_debt payload:', JSON.stringify(transaction));
+      // TX payload ready
       const txResult = await executeTransaction(transaction);
 
       const txId = txResult?.transactionId;

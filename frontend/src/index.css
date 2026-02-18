@@ -15,9 +15,7 @@
   --red: #ff4444;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body, #root {
   height: 100%;
@@ -33,29 +31,153 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Subtle CRT scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 136, 0.015) 2px,
+    rgba(0, 255, 136, 0.015) 4px
+  );
+}
+
+/* Ambient background glow */
+#root {
+  background: radial-gradient(ellipse at 50% 0%, rgba(0, 255, 136, 0.03) 0%, transparent 60%);
+}
+
 ::selection {
   background: var(--green);
   color: var(--bg);
 }
 
-::-webkit-scrollbar {
-  width: 6px;
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); }
+::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+/* Gradient text utility */
+.text-gradient {
+  background: linear-gradient(90deg, #00ff88, #00aaff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--bg);
+/* Blinking cursor */
+.cursor-blink::after {
+  content: '\2588';
+  animation: blink 0.8s step-end infinite;
+  color: var(--green);
+  margin-left: 2px;
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 0;
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--dim);
+/* Glow effects */
+.glow-green {
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.08), inset 0 1px 0 rgba(0, 255, 136, 0.05);
+}
+
+.glow-green-strong {
+  box-shadow: 0 0 30px rgba(0, 255, 136, 0.15), 0 0 60px rgba(0, 255, 136, 0.05);
+}
+
+/* Card hover lift */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 255, 136, 0.08);
+  border-color: rgba(0, 255, 136, 0.3) !important;
+}
+
+/* Left accent border */
+.border-accent-left {
+  border-left: 2px solid;
+  border-image: linear-gradient(to bottom, #00ff88, #00aaff) 1;
+}
+
+/* Top glow line */
+.glow-top {
+  position: relative;
+}
+.glow-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #00ff88, transparent);
+}
+
+/* Staggered fade-in */
+.stagger-1 { animation: fadeIn 0.3s ease-out 0.05s both; }
+.stagger-2 { animation: fadeIn 0.3s ease-out 0.1s both; }
+.stagger-3 { animation: fadeIn 0.3s ease-out 0.15s both; }
+.stagger-4 { animation: fadeIn 0.3s ease-out 0.2s both; }
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Pulse glow for buttons */
+.btn-glow:hover {
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+}
+
+/* Toast animations */
+.toast-enter {
+  animation: slideInRight 0.3s ease-out;
+}
+.toast-exit {
+  animation: slideOutRight 0.3s ease-in forwards;
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOutRight {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
 }
 
 /* Shield Wallet modal overrides */
 .wallet-adapter-modal-wrapper {
   font-family: 'JetBrains Mono', monospace !important;
+}
+.wallet-adapter-modal-wrapper .wallet-adapter-modal {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+}
+.wallet-adapter-modal-wrapper button {
+  font-family: 'JetBrains Mono', monospace !important;
+  border-radius: 0 !important;
+}
+
+/* Mobile nav overlay */
+.mobile-nav-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .desktop-nav { display: none; }
+  .mobile-menu-btn { display: flex; }
+}
+@media (min-width: 769px) {
+  .mobile-menu-btn { display: none; }
 }

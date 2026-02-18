@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { CommandBar } from './CommandBar';
 import { StatusBar } from './StatusBar';
+import { ToastContainer } from '../ui/Toast';
 
 export function Shell() {
   return (
@@ -10,6 +11,7 @@ export function Shell() {
         <Outlet />
       </main>
       <StatusBar />
+      <ToastContainer />
     </div>
   );
 }

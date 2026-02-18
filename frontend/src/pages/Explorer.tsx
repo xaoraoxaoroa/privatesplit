@@ -123,6 +123,33 @@ export function Explorer() {
         </div>
       </TerminalCard>
 
+      {/* Quick Links */}
+      {!splitResult && !txResult && !error && (
+        <TerminalCard title="QUICK LOOKUP">
+          <div className="space-y-2 text-xs">
+            <p className="text-terminal-dim">Try one of these confirmed on-chain items:</p>
+            <button
+              onClick={() => { setQuery('1904758949858929157912240259749859140762221531679669196161601694830550064831field'); setSearchType('split_id'); }}
+              className="block text-terminal-cyan hover:underline text-left break-all"
+            >
+              {STATUS_SYMBOLS.arrow} Split: 19047589498...064831field
+            </button>
+            <button
+              onClick={() => { setQuery('987654321098765field'); setSearchType('salt'); }}
+              className="block text-terminal-cyan hover:underline text-left"
+            >
+              {STATUS_SYMBOLS.arrow} Salt: 987654321098765field
+            </button>
+            <button
+              onClick={() => { setQuery('at1ue3v4t5u9rsmf7h7jnee8dhr6dguda59lrct68j3d4rjhm395vqqhjwcxv'); setSearchType('tx'); }}
+              className="block text-terminal-cyan hover:underline text-left break-all"
+            >
+              {STATUS_SYMBOLS.arrow} TX: at1ue3v4t5u...hjwcxv
+            </button>
+          </div>
+        </TerminalCard>
+      )}
+
       {/* Error */}
       {error && (
         <TerminalCard variant="error">

@@ -75,7 +75,7 @@ export function useSettleSplit() {
         privateFee: false,
       };
 
-      console.log('PrivateSplit settle_split payload:', JSON.stringify(transaction));
+      // TX payload ready
       const txResult = await executeTransaction(transaction);
 
       const txId = txResult?.transactionId;

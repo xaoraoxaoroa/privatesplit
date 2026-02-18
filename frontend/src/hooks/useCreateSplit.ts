@@ -60,7 +60,7 @@ export function useCreateSplit() {
       };
 
       addLog('Requesting transaction execution...', 'system');
-      console.log('PrivateSplit TX payload:', JSON.stringify(transaction));
+      // TX payload ready
 
       // Execute — this calls Shield Wallet's executeTransaction
       let txId = '';
@@ -258,7 +258,7 @@ export function useCreateSplit() {
       const msg = err?.message || 'Failed to create split';
       setError(msg);
       addLog(`Error: ${msg}`, 'error');
-      console.error('PrivateSplit create_split error:', err);
+      // Create split error handled via state
       return null;
     } finally {
       setLoading(false);

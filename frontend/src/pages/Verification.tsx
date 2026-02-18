@@ -71,7 +71,7 @@ export function Verification() {
 
       setVerificationResults(results);
     } catch (err: any) {
-      console.error('Verification failed:', err);
+      // Verification scan error — handled silently
     } finally {
       setLoading(false);
     }

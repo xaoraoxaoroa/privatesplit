@@ -208,7 +208,7 @@ export function usePaySplit() {
         privateFee: false,
       };
 
-      console.log('PrivateSplit pay_debt payload:', JSON.stringify(transaction));
+      // TX payload ready
       const txResult = await executeTransaction(transaction);
 
       const resultTxId = txResult?.transactionId;

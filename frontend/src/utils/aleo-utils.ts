@@ -10,7 +10,7 @@ export function generateSalt(): string {
 }
 
 export async function getSplitIdFromMapping(salt: string): Promise<string | null> {
-  console.log(`Checking salt mapping for ${salt}...`);
+  // Query salt→split_id mapping
   try {
     const url = `${TESTNET_API}/program/${PROGRAM_ID}/mapping/split_salts/${salt}`;
     const res = await fetch(url);
@@ -18,14 +18,14 @@ export async function getSplitIdFromMapping(salt: string): Promise<string | null
     const val = await res.json();
     if (val) return val.toString().replace(/(['"])/g, '');
   } catch (e) {
-    console.error('getSplitIdFromMapping error:', e);
+    // Mapping query failed — may not exist yet
   }
   return null;
 }
 
 export async function getSplitStatus(splitId: string): Promise<{ participant_count: number; payment_count: number; status: number } | null> {
   if (!splitId || splitId === 'null' || splitId === 'undefined') return null;
-  console.log(`Checking split status for ${splitId}...`);
+  // Query split status mapping
   try {
     const url = `${TESTNET_API}/program/${PROGRAM_ID}/mapping/splits/${splitId}`;
     const res = await fetch(url);
@@ -55,7 +55,7 @@ export async function getSplitStatus(splitId: string): Promise<{ participant_cou
       };
     }
   } catch (e) {
-    console.error('getSplitStatus error:', e);
+    // Status query failed
   }
   return null;
 }
