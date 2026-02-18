@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../design-system/cn';
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react';
+import { WalletMultiButton } from '@provablehq/aleo-wallet-adaptor-react-ui';
 import { truncateAddress } from '../../utils/format';
 
 const NAV_ITEMS = [
@@ -39,17 +40,19 @@ export function CommandBar() {
             ))}
           </nav>
         </div>
-        <Link
-          to="/connect"
-          className={cn(
-            'text-xs tracking-wider px-3 py-1 border transition-colors',
-            connected
-              ? 'border-terminal-green text-terminal-green'
-              : 'border-terminal-border text-terminal-dim hover:border-terminal-text hover:text-terminal-text',
+        <div className="flex items-center gap-3">
+          {connected && address && (
+            <Link
+              to="/connect"
+              className="text-xs tracking-wider text-terminal-green"
+            >
+              {truncateAddress(address)}
+            </Link>
           )}
-        >
-          {connected && address ? truncateAddress(address) : '[ CONNECT ]'}
-        </Link>
+          <div className="wallet-adapter-wrapper">
+            <WalletMultiButton className="!bg-transparent !border !border-terminal-green !text-terminal-green !font-mono !text-xs !tracking-wider !px-3 !py-1 !rounded-none !h-auto hover:!bg-terminal-green hover:!text-terminal-bg !transition-colors !min-w-0" />
+          </div>
+        </div>
       </div>
     </header>
   );
