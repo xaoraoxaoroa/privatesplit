@@ -7,4 +7,4 @@ export const MAX_PARTICIPANTS = 8;
 export const MIN_PARTICIPANTS = 2;
 export const POLL_INTERVAL = 1000;
 export const POLL_MAX_ATTEMPTS = 120;
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';

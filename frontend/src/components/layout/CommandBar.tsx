@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { path: '/create', label: 'create' },
   { path: '/history', label: 'history' },
   { path: '/explorer', label: 'explorer' },
+  { path: '/privacy', label: 'privacy' },
   { path: '/verify', label: 'verify' },
 ];
 

@@ -9,6 +9,7 @@ import { History } from './pages/History';
 import { Connect } from './pages/Connect';
 import { Explorer } from './pages/Explorer';
 import { Verification } from './pages/Verification';
+import { Privacy } from './pages/Privacy';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/history" element={<History />} />
             <Route path="/explorer" element={<Explorer />} />
             <Route path="/verify" element={<Verification />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/connect" element={<Connect />} />
           </Route>
         </Routes>
