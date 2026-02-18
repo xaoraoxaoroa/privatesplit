@@ -48,9 +48,15 @@ export function useSettleSplit() {
         addLog(`Record fetch: ${err.message}`, 'warning');
       }
 
-      // Even without finding the exact record, the wallet adapter may handle
-      // record selection through its UI — pass what we have
-      const inputs: string[] = splitRecordInput ? [splitRecordInput] : [];
+      if (!splitRecordInput) {
+        setError('Split record not found in wallet. The wallet may need to sync.');
+        addLog('Split record not found — wallet may need to sync', 'error');
+        setLoading(false);
+        return false;
+      }
+
+      // settle_split takes exactly 1 input: the Split record
+      const inputs: string[] = [splitRecordInput];
 
       const transaction: TransactionOptions = {
         program: PROGRAM_ID,
