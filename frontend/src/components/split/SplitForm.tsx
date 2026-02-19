@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react';
 import { TerminalCard, TerminalInput, TerminalButton, TerminalSelect } from '../ui';
 import { MAX_PARTICIPANTS, MIN_PARTICIPANTS } from '../../utils/constants';
-import { STATUS_SYMBOLS } from '../../design-system/tokens';
+import { CheckCircle2, AlertCircle, Users, Coins, FileText } from 'lucide-react';
 
 const ALEO_ADDRESS_REGEX = /^aleo1[a-z0-9]{58}$/;
 
@@ -89,9 +89,41 @@ export function SplitForm({ onSubmit, loading }: SplitFormProps) {
 
   const isValid = description.trim().length >= 3 && parseFloat(amount) > 0 && participants.some(Boolean);
 
+  // Step tracking
+  const step1Done = description.trim().length >= 3;
+  const step2Done = parseFloat(amount) > 0;
+  const step3Done = participants.some((a) => a && ALEO_ADDRESS_REGEX.test(a) && a !== address);
+
+  const steps = [
+    { label: 'Details', done: step1Done, icon: FileText },
+    { label: 'Amount', done: step2Done, icon: Coins },
+    { label: 'People', done: step3Done, icon: Users },
+  ];
+
   return (
     <form onSubmit={handleSubmit}>
-      <TerminalCard title="NEW SPLIT">
+      {/* Step Indicator */}
+      <div className="flex items-center justify-center gap-2 mb-6">
+        {steps.map((s, i) => (
+          <div key={s.label} className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+              s.done
+                ? 'bg-terminal-green/10 border border-terminal-green/30 text-terminal-green'
+                : 'bg-white/[0.03] border border-white/[0.06] text-terminal-dim'
+            }`}>
+              {s.done ? <CheckCircle2 className="w-4 h-4" /> : <s.icon className="w-4 h-4" />}
+            </div>
+            <span className={`text-[10px] font-medium tracking-wide ${s.done ? 'text-terminal-green' : 'text-terminal-dim'}`}>
+              {s.label}
+            </span>
+            {i < steps.length - 1 && (
+              <div className={`w-8 h-px ${s.done ? 'bg-terminal-green/30' : 'bg-white/[0.06]'}`} />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <TerminalCard variant="elevated">
         <div className="space-y-5">
           <div>
             <TerminalInput
@@ -102,9 +134,9 @@ export function SplitForm({ onSubmit, loading }: SplitFormProps) {
               error={errors.description}
               required
             />
-            {!errors.description && description.trim().length >= 3 && (
+            {!errors.description && step1Done && (
               <p className="text-terminal-green text-[10px] mt-1 flex items-center gap-1">
-                <span>{STATUS_SYMBOLS.success}</span> Valid
+                <CheckCircle2 className="w-3 h-3" /> Valid
               </p>
             )}
           </div>
@@ -121,9 +153,9 @@ export function SplitForm({ onSubmit, loading }: SplitFormProps) {
               error={errors.amount}
               required
             />
-            {!errors.amount && parseFloat(amount) > 0 && (
+            {!errors.amount && step2Done && (
               <p className="text-terminal-green text-[10px] mt-1 flex items-center gap-1">
-                <span>{STATUS_SYMBOLS.success}</span> Valid
+                <CheckCircle2 className="w-3 h-3" /> Valid
               </p>
             )}
           </div>
@@ -136,18 +168,23 @@ export function SplitForm({ onSubmit, loading }: SplitFormProps) {
           />
 
           {amount && participantCount > 0 && (
-            <div className="glass-card p-3 text-xs text-terminal-dim">
-              <span className="text-terminal-green">{STATUS_SYMBOLS.arrow}</span> Each person pays:{' '}
-              <span className="text-terminal-green font-semibold font-mono">
-                {(parseFloat(amount || '0') / participantCount).toFixed(6)} credits
+            <div className="glass-card-subtle p-3.5 flex items-center justify-between">
+              <span className="text-[10px] text-terminal-dim tracking-wide uppercase">Per Person</span>
+              <span className="text-terminal-green font-semibold font-mono text-sm">
+                {(parseFloat(amount || '0') / participantCount).toFixed(6)}
+                <span className="text-terminal-dim text-[10px] ml-1 font-normal">credits</span>
               </span>
             </div>
           )}
 
           <div className="space-y-3 border-t border-white/[0.06] pt-4">
-            <p className="text-[10px] text-terminal-dim tracking-wider uppercase font-medium">Participant Addresses</p>
+            <p className="text-[10px] text-terminal-dim tracking-[0.15em] uppercase font-medium flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" /> Participant Addresses
+            </p>
             {errors.participants && (
-              <p className="text-terminal-red text-[10px]">{STATUS_SYMBOLS.error} {errors.participants}</p>
+              <p className="text-terminal-red text-[10px] flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> {errors.participants}
+              </p>
             )}
             {participants.map((addr, i) => (
               <div key={i}>
@@ -159,15 +196,15 @@ export function SplitForm({ onSubmit, loading }: SplitFormProps) {
                 />
                 {!errors[`participant_${i}`] && addr && ALEO_ADDRESS_REGEX.test(addr) && addr !== address && (
                   <p className="text-terminal-green text-[10px] mt-1 flex items-center gap-1">
-                    <span>{STATUS_SYMBOLS.success}</span> Valid address
+                    <CheckCircle2 className="w-3 h-3" /> Valid address
                   </p>
                 )}
               </div>
             ))}
           </div>
 
-          <TerminalButton type="submit" loading={loading} className="w-full" disabled={!isValid && !loading}>
-            CREATE SPLIT
+          <TerminalButton type="submit" loading={loading} className="w-full" size="lg" disabled={!isValid && !loading}>
+            {isValid ? 'CREATE SPLIT' : 'COMPLETE ALL FIELDS'}
           </TerminalButton>
         </div>
       </TerminalCard>

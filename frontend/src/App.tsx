@@ -11,6 +11,8 @@ import { Connect } from './pages/Connect';
 import { Explorer } from './pages/Explorer';
 import { Verification } from './pages/Verification';
 import { Privacy } from './pages/Privacy';
+import { Vision } from './pages/Vision';
+import { Docs } from './pages/Docs';
 
 export default function App() {
   return (
@@ -27,6 +29,8 @@ export default function App() {
               <Route path="/explorer" element={<ErrorBoundary><Explorer /></ErrorBoundary>} />
               <Route path="/verify" element={<ErrorBoundary><Verification /></ErrorBoundary>} />
               <Route path="/privacy" element={<ErrorBoundary><Privacy /></ErrorBoundary>} />
+              <Route path="/vision" element={<ErrorBoundary><Vision /></ErrorBoundary>} />
+              <Route path="/docs" element={<ErrorBoundary><Docs /></ErrorBoundary>} />
               <Route path="/connect" element={<ErrorBoundary><Connect /></ErrorBoundary>} />
             </Route>
           </Routes>

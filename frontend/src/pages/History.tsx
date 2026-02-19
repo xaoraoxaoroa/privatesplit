@@ -4,6 +4,8 @@ import { TerminalCard, TerminalButton } from '../components/ui';
 import { SplitCard } from '../components/split/SplitCard';
 import { useSplitStore } from '../store/splitStore';
 import { Link } from 'react-router-dom';
+import { PageTransition } from '../components/PageTransition';
+import { Layers, Plus } from 'lucide-react';
 
 type Filter = 'all' | 'active' | 'settled';
 
@@ -17,38 +19,44 @@ export function History() {
 
   if (!connected) {
     return (
-      <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
-        <h1 className="text-xl font-bold text-gradient">My Splits</h1>
+      <PageTransition>
+      <div className="max-w-xl mx-auto space-y-6">
+        <h1 className="text-xl font-bold text-white/90">My Splits</h1>
         <TerminalCard>
           <div className="py-8 text-center">
-            <p className="text-sm text-terminal-text mb-2">Wallet Required</p>
-            <p className="text-xs text-terminal-dim mb-4">Connect wallet to view your split history</p>
+            <Layers className="w-8 h-8 text-white/[0.06] mx-auto mb-3" />
+            <p className="text-sm text-white/80 mb-2">Wallet Required</p>
+            <p className="text-xs text-white/40 mb-4">Connect wallet to view your split history</p>
             <Link to="/connect">
               <TerminalButton variant="secondary" className="w-full">CONNECT WALLET</TerminalButton>
             </Link>
           </div>
         </TerminalCard>
       </div>
+      </PageTransition>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <PageTransition>
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gradient">My Splits</h1>
-          <p className="text-xs text-terminal-dim mt-1">{mySplits.length} total splits</p>
+          <h1 className="text-xl font-bold text-white/90">My Splits</h1>
+          <p className="text-xs text-white/40 mt-1">{mySplits.length} total splits</p>
         </div>
-        <div className="flex items-center gap-1.5">
+        {/* Segmented filter */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)' }}>
           {(['all', 'active', 'settled'] as Filter[]).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-xs font-medium tracking-wide rounded-lg border transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium tracking-wide rounded-lg transition-all ${
                 filter === f
-                  ? 'border-terminal-green/40 text-terminal-green bg-terminal-green/10'
-                  : 'border-white/[0.06] text-terminal-dim hover:text-terminal-text hover:bg-white/[0.03]'
+                  ? 'text-emerald-400'
+                  : 'text-white/40 hover:text-white/60'
               }`}
+              style={filter === f ? { background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.2)' } : { border: '1px solid transparent' }}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
@@ -59,14 +67,17 @@ export function History() {
       {filtered.length === 0 ? (
         <TerminalCard>
           <div className="py-8 text-center">
-            <p className="text-sm text-terminal-text mb-2">
+            <Layers className="w-12 h-12 text-white/[0.06] mx-auto mb-3" />
+            <p className="text-sm text-white/80 mb-2">
               No {filter === 'all' ? '' : filter + ' '}splits found
             </p>
-            <p className="text-xs text-terminal-dim mb-4">
+            <p className="text-xs text-white/40 mb-4">
               Create your first split to get started.
             </p>
             <Link to="/create">
-              <TerminalButton variant="secondary" className="w-full">CREATE A SPLIT</TerminalButton>
+              <TerminalButton variant="primary" className="w-full">
+                <Plus className="w-3.5 h-3.5" /> CREATE A SPLIT
+              </TerminalButton>
             </Link>
           </div>
         </TerminalCard>
@@ -78,5 +89,6 @@ export function History() {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }
