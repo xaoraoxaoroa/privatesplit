@@ -27,24 +27,12 @@ export function TerminalButton({
         'border font-medium tracking-wider uppercase inline-flex items-center justify-center',
         'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none',
         sizeStyles,
-        variant === 'primary' && [
-          'border-emerald-400/30 text-emerald-400',
-          'hover:border-emerald-400/50 hover:text-emerald-300',
-          'hover:shadow-[0_0_24px_rgba(52,211,153,0.2)]',
-          'disabled:hover:bg-transparent',
-        ],
-        variant === 'secondary' && [
-          'border-white/10 text-white/50',
-          'hover:border-white/20 hover:text-white/80',
-          'hover:bg-white/[0.06]',
-          'disabled:hover:bg-transparent',
-        ],
-        variant === 'danger' && [
-          'border-red-400/30 text-red-400',
-          'hover:border-red-400/50 hover:text-red-300',
-          'hover:shadow-[0_0_24px_rgba(248,113,113,0.2)]',
-          'disabled:hover:bg-transparent',
-        ],
+        variant === 'primary' &&
+          'border-emerald-400/30 text-emerald-400 hover:border-emerald-400/50 hover:text-emerald-300 hover:shadow-[0_0_24px_rgba(52,211,153,0.2)] disabled:hover:bg-transparent',
+        variant === 'secondary' &&
+          'border-white/10 text-white/50 hover:border-white/20 hover:text-white/80 hover:bg-white/[0.06] disabled:hover:bg-transparent',
+        variant === 'danger' &&
+          'border-red-400/30 text-red-400 hover:border-red-400/50 hover:text-red-300 hover:shadow-[0_0_24px_rgba(248,113,113,0.2)] disabled:hover:bg-transparent',
         className,
       )}
       style={{
