@@ -73,12 +73,18 @@ export function usePaySplit() {
       let debtRecordInput: any = null;
       let debtAmount = 0;
       let resolvedProgram = PROGRAM_ID;
+      const debtCandidates: { input: any; program: string }[] = [];
 
       // Try both v2 and v1 programs (debt may have been issued on either)
       const programsToCheck = [PROGRAM_ID, PROGRAM_ID_V1];
 
       for (const progId of programsToCheck) {
         if (debtRecordInput) break;
+        // Skip v1 if we already have v2 candidates
+        if (progId === PROGRAM_ID_V1 && debtCandidates.length > 0) {
+          addLog(`Skipping ${PROGRAM_ID_V1} — using v2 candidates`, 'info');
+          break;
+        }
 
       // Retry up to 3 times for wallet sync
       for (let attempt = 0; attempt < 3 && !debtRecordInput; attempt++) {
@@ -115,12 +121,26 @@ export function usePaySplit() {
               addLog(`Found Debt record from ${progId} (amount: ${debtAmount} microcredits)`, 'success');
               break;
             }
+            // Candidate fallback: collect any unspent record even if unidentifiable
+            if (isDebt) {
+              debtCandidates.unshift({ input: recordInput, program: progId });
+              addLog(`Found Debt record candidate (${progId})`, 'info');
+            } else {
+              debtCandidates.push({ input: recordInput, program: progId });
+            }
           }
         } catch (err: any) {
           addLog(`Record fetch: ${err.message}`, 'warning');
         }
       }
       } // end programsToCheck loop
+
+      // Use best candidate if no exact match
+      if (!debtRecordInput && debtCandidates.length > 0) {
+        debtRecordInput = debtCandidates[0].input;
+        resolvedProgram = debtCandidates[0].program;
+        addLog(`Using Debt candidate from ${resolvedProgram} (${debtCandidates.length} available)`, 'info');
+      }
 
       if (!debtRecordInput) {
         setError('No Debt record found in your wallet. The split creator must issue a debt to you first. If they just issued it, wait a moment and try again.');
