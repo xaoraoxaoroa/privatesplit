@@ -74,35 +74,46 @@ export function useIssueDebt() {
         if (splitRecordInput) break;
       }
 
-      // Use best candidate if no exact match
-      if (!splitRecordInput && candidates.length > 0) {
-        splitRecordInput = candidates[0].input;
-        resolvedProgram = candidates[0].program;
-        addLog(`Using record candidate from ${resolvedProgram} (${candidates.length} available)`, 'info');
-      }
-
-      if (!splitRecordInput) {
+      if (!splitRecordInput && candidates.length === 0) {
         setError('No records found in wallet. The wallet may need a moment to sync — please try again in a few seconds.');
         addLog('No records found — wallet sync may be needed', 'error');
         setLoading(false);
         return false;
       }
 
-      // issue_debt: Split record + participant address
-      const inputs = [splitRecordInput, participant];
+      // Build ordered list: exact match first, then candidates
+      const toTry: { input: any; program: string }[] = [];
+      if (splitRecordInput) {
+        toTry.push({ input: splitRecordInput, program: resolvedProgram });
+      }
+      for (const c of candidates) {
+        if (c.input !== splitRecordInput) toTry.push(c);
+      }
 
-      addLog(`Executing issue_debt on ${resolvedProgram}...`, 'system');
+      // Try each candidate — wallet rejects wrong record types
+      let txResult: any = null;
+      for (let i = 0; i < toTry.length; i++) {
+        const candidate = toTry[i];
+        addLog(`Trying issue_debt on ${candidate.program} (candidate ${i + 1}/${toTry.length})...`, 'system');
 
-      const transaction: TransactionOptions = {
-        program: resolvedProgram,
-        function: 'issue_debt',
-        inputs: inputs,
-        fee: 100_000,
-        privateFee: false,
-      };
+        const transaction: TransactionOptions = {
+          program: candidate.program,
+          function: 'issue_debt',
+          inputs: [candidate.input, participant],
+          fee: 100_000,
+          privateFee: false,
+        };
 
-      // TX payload ready
-      const txResult = await executeTransaction(transaction);
+        try {
+          txResult = await executeTransaction(transaction);
+          resolvedProgram = candidate.program;
+          addLog(`issue_debt accepted by wallet`, 'success');
+          break;
+        } catch (txErr: any) {
+          addLog(`Candidate ${i + 1} rejected: ${txErr?.message || 'wrong record type'}`, 'warning');
+          if (i === toTry.length - 1) throw txErr; // last one, rethrow
+        }
+      }
 
       const txId = txResult?.transactionId;
       addLog(`Issue debt submitted: ${txId}`, 'success');

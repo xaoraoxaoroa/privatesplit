@@ -69,34 +69,46 @@ export function useSettleSplit() {
         if (splitRecordInput) break;
       }
 
-      if (!splitRecordInput && candidates.length > 0) {
-        splitRecordInput = candidates[0].input;
-        resolvedProgram = candidates[0].program;
-        addLog(`Using record candidate from ${resolvedProgram}`, 'info');
-      }
-
-      if (!splitRecordInput) {
+      if (!splitRecordInput && candidates.length === 0) {
         setError('Split record not found in wallet. The wallet may need a moment to sync — please try again shortly.');
         addLog('Split record not found — wallet sync may be needed', 'error');
         setLoading(false);
         return false;
       }
 
-      // settle_split takes exactly 1 input: the Split record
-      const inputs: any[] = [splitRecordInput];
+      // Build ordered list: exact match first, then candidates
+      const toTry: { input: any; program: string }[] = [];
+      if (splitRecordInput) {
+        toTry.push({ input: splitRecordInput, program: resolvedProgram });
+      }
+      for (const c of candidates) {
+        if (c.input !== splitRecordInput) toTry.push(c);
+      }
 
-      addLog(`Executing settle_split on ${resolvedProgram}...`, 'system');
+      // Try each candidate — wallet rejects wrong record types
+      let txResult: any = null;
+      for (let i = 0; i < toTry.length; i++) {
+        const candidate = toTry[i];
+        addLog(`Trying settle_split on ${candidate.program} (candidate ${i + 1}/${toTry.length})...`, 'system');
 
-      const transaction: TransactionOptions = {
-        program: resolvedProgram,
-        function: 'settle_split',
-        inputs: inputs,
-        fee: 100_000,
-        privateFee: false,
-      };
+        const transaction: TransactionOptions = {
+          program: candidate.program,
+          function: 'settle_split',
+          inputs: [candidate.input],
+          fee: 100_000,
+          privateFee: false,
+        };
 
-      // TX payload ready
-      const txResult = await executeTransaction(transaction);
+        try {
+          txResult = await executeTransaction(transaction);
+          resolvedProgram = candidate.program;
+          addLog(`settle_split accepted by wallet`, 'success');
+          break;
+        } catch (txErr: any) {
+          addLog(`Candidate ${i + 1} rejected: ${txErr?.message || 'wrong record type'}`, 'warning');
+          if (i === toTry.length - 1) throw txErr; // last one, rethrow
+        }
+      }
 
       const txId = txResult?.transactionId;
       addLog(`Settle transaction submitted: ${txId}`, 'success');
