@@ -236,7 +236,7 @@ export function useCreateSplit() {
         status: 'active',
         payment_count: 0,
         created_at: new Date().toISOString(),
-        transaction_id: finalTxId || undefined,
+        transaction_id: finalTxId?.startsWith('at1') ? finalTxId : undefined,
         participants: params.participants.filter(Boolean).map((addr) => ({
           address: addr,
           paid: false,
@@ -258,7 +258,7 @@ export function useCreateSplit() {
         category,
         expiry_hours: expiryHours,
         token_type: tokenType,
-        transaction_id: finalTxId || '',
+        transaction_id: finalTxId?.startsWith('at1') ? finalTxId : '',
         participants: params.participants.filter(Boolean),
       }).catch((err: any) => addLog(`Backend save failed: ${err.message}`, 'warning'));
 

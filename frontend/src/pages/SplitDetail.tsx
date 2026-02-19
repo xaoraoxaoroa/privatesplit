@@ -151,7 +151,7 @@ export function SplitDetail() {
               <span className="text-white/40">Creator</span>
               <span className="text-white/80 font-mono">{truncateAddress(split.creator)}</span>
             </div>
-            {split.transaction_id && (
+            {split.transaction_id?.startsWith('at1') && (
               <div className="flex justify-between text-xs">
                 <span className="text-white/40">TX</span>
                 <a

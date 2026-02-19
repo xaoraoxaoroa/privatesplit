@@ -51,8 +51,13 @@ export function useIssueDebt() {
               } catch { /* continue */ }
             }
 
-            const recordInput = r.plaintext || r.ciphertext || r.recordCiphertext || null;
-            if (!recordInput) continue;
+            // Try all known properties for record input string
+            const recordInput = r.plaintext || r.ciphertext || r.recordCiphertext
+              || (typeof r === 'string' ? r : null);
+            if (!recordInput) {
+              addLog(`Record has no extractable input (keys: ${Object.keys(r).join(', ')})`, 'warning');
+              continue;
+            }
 
             // If we can read the record, prefer exact matches
             const isSplit = isSplitRecord(plaintext, r.data);

@@ -48,7 +48,8 @@ export function useSettleSplit() {
               } catch { /* continue */ }
             }
 
-            const recordInput = r.plaintext || r.ciphertext || r.recordCiphertext || null;
+            const recordInput = r.plaintext || r.ciphertext || r.recordCiphertext
+              || (typeof r === 'string' ? r : null);
             if (!recordInput) continue;
 
             const isSplit = isSplitRecord(plaintext, r.data);
