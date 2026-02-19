@@ -1,0 +1,16 @@
+{
+  "program": "private_split_v2.aleo",
+  "version": "0.2.0",
+  "description": "PrivateSplit v2 — Privacy-first expense splitting on Aleo with expiry, categories, and USDCx readiness",
+  "license": "MIT",
+  "leo": "3.4.0",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "path": null,
+      "edition": null
+    }
+  ],
+  "dev_dependencies": []
+}

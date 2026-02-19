@@ -7,10 +7,15 @@ import { useSplitStatus } from '../hooks/useSplitStatus';
 import { useSettleSplit } from '../hooks/useSettleSplit';
 import { useIssueDebt } from '../hooks/useIssueDebt';
 import { microToCredits, truncateAddress } from '../utils/format';
+import { CATEGORY_META, TOKEN_META } from '../types/split';
+import type { SplitCategory } from '../types/split';
+import { api } from '../services/api';
+import { EXPLORER_URL } from '../utils/constants';
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { PageTransition } from '../components/PageTransition';
-import { Copy, QrCode, ExternalLink, Send, AlertTriangle, RefreshCw, ArrowLeft, Clock } from 'lucide-react';
+import { CategoryIcon } from '../components/ui';
+import { Copy, QrCode, ExternalLink, Send, AlertTriangle, RefreshCw, ArrowLeft, Clock, Download, Tag } from 'lucide-react';
 
 export function SplitDetail() {
   const { hash } = useParams<{ hash: string }>();
@@ -48,6 +53,8 @@ export function SplitDetail() {
   }
 
   const isCreator = address === split.creator;
+  const catMeta = split.category ? CATEGORY_META[split.category as SplitCategory] : null;
+  const tokenSymbol = TOKEN_META[split.token_type || 'credits']?.symbol || 'ALEO';
   const shareUrl = `${window.location.origin}/pay?creator=${split.creator}&amount=${split.per_person}&salt=${split.salt}&split_id=${split.split_id}&desc=${encodeURIComponent(split.description || '')}`;
 
   const handleCopy = () => {
@@ -60,21 +67,67 @@ export function SplitDetail() {
     settleSplit(split.split_id);
   };
 
+  const handleExportReceipt = async (type: 'payer' | 'creator') => {
+    try {
+      const receipt = await api.exportReceipt(split.split_id, type);
+      const blob = new Blob([JSON.stringify(receipt, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt_${type}_${split.split_id.slice(0, 12)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Fallback: export local data
+      const receipt = {
+        type,
+        split_id: split.split_id,
+        amount: split.total_amount,
+        per_person: split.per_person,
+        creator: split.creator,
+        participant_count: split.participant_count,
+        category: split.category || 'other',
+        token_type: split.token_type || 'credits',
+        status: split.status,
+        created_at: split.created_at,
+        transaction_id: split.transaction_id || '',
+        verification_url: `${window.location.origin}/verify?split_id=${split.split_id}`,
+      };
+      const blob = new Blob([JSON.stringify(receipt, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt_${type}_${split.split_id.slice(0, 12)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
   return (
     <PageTransition>
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white/90">
-            {split.description || 'Split Detail'}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-white/90">
+              {split.description || 'Split Detail'}
+            </h1>
+            {catMeta && (
+              <span
+                className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                style={{ background: `${catMeta.color}15`, color: catMeta.color, border: `1px solid ${catMeta.color}30` }}
+              >
+                <CategoryIcon name={catMeta.icon} className="w-3 h-3 inline" /> {catMeta.label}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-white/30 mt-1 font-mono">
             ID: {split.split_id.slice(0, 24)}...
           </p>
         </div>
         <TerminalBadge
-          status={split.status === 'settled' ? 'settled' : 'active'}
+          status={split.status === 'settled' ? 'settled' : split.status === 'expired' ? 'settled' : 'active'}
         />
       </div>
 
@@ -84,11 +137,11 @@ export function SplitDetail() {
           <div className="space-y-3">
             <div className="flex justify-between text-xs">
               <span className="text-white/40">Total</span>
-              <span className="text-emerald-400 font-semibold font-mono">{microToCredits(split.total_amount)} credits</span>
+              <span className="text-emerald-400 font-semibold font-mono">{microToCredits(split.total_amount)} {tokenSymbol}</span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-white/40">Per Person</span>
-              <span className="text-white/80 font-mono">{microToCredits(split.per_person)} credits</span>
+              <span className="text-white/80 font-mono">{microToCredits(split.per_person)} {tokenSymbol}</span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-white/40">Participants</span>
@@ -179,6 +232,23 @@ export function SplitDetail() {
               <QRCodeSVG value={shareUrl} size={200} />
             </div>
           )}
+        </div>
+      </TerminalCard>
+
+      {/* Receipt Export */}
+      <TerminalCard title="EXPORT RECEIPT">
+        <p className="text-xs text-white/40 mb-3">
+          Download a cryptographic receipt proving your involvement in this split.
+        </p>
+        <div className="flex gap-2">
+          {isCreator && (
+            <TerminalButton variant="secondary" className="flex-1" onClick={() => handleExportReceipt('creator')}>
+              <Download className="w-3.5 h-3.5" /> CREATOR RECEIPT
+            </TerminalButton>
+          )}
+          <TerminalButton variant="secondary" className="flex-1" onClick={() => handleExportReceipt('payer')}>
+            <Download className="w-3.5 h-3.5" /> PAYER RECEIPT
+          </TerminalButton>
         </div>
       </TerminalCard>
 

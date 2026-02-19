@@ -6,6 +6,7 @@ import { useCreateSplit } from '../hooks/useCreateSplit';
 import { useUIStore } from '../store/splitStore';
 import { PageTransition } from '../components/PageTransition';
 import { Layers, Clock, AlertCircle } from 'lucide-react';
+import type { SplitCategory, TokenType } from '../types/split';
 
 export function CreateSplit() {
   const navigate = useNavigate();
@@ -18,6 +19,9 @@ export function CreateSplit() {
     amount: string;
     participantCount: number;
     participants: string[];
+    category: SplitCategory;
+    expiryHours: number;
+    tokenType: TokenType;
   }) => {
     const split = await createSplit(data);
     if (split && split.split_id && split.split_id !== 'null' && !split.split_id.startsWith('pending_')) {

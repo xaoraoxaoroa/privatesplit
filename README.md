@@ -3,7 +3,7 @@
 > Split expenses with friends without revealing who owes what, how much, or who paid.
 
 **Live Demo:** https://privatesplit.vercel.app
-**Contract:** `private_split_v1.aleo` on Aleo Testnet
+**Contract:** `private_split_v2.aleo` on Aleo Testnet (v1 also deployed)
 **Built for:** Aleo Privacy Buildathon by AKINDO — Wave 2
 **GitHub:** https://github.com/xaoraoxaoroa/PrivateSplit
 
@@ -63,26 +63,27 @@ This is architecturally impossible with hash-based invoice systems that must reg
 
 ---
 
-## Smart Contract: 5 Transitions, 4 Records, Zero Leaks
+## Smart Contract: 6 Transitions, 4 Records, Zero Leaks
 
 ```
-program private_split_v1.aleo
+program private_split_v1.aleo (deployed) / private_split_v2.aleo (ready)
 │
 ├── Records (ALL private, encrypted to owner)
-│   ├── Split         — Creator's record (total, per-person, count)
+│   ├── Split         — Creator's record (total, per-person, count, expiry)
 │   ├── Debt          — Participant's record (amount owed, to whom)
 │   ├── PayerReceipt  — Payer's proof of payment
 │   └── CreatorReceipt — Creator's proof of receipt
 │
 ├── Mappings (ONLY anonymous counters, zero private data)
-│   ├── splits:      split_id → {participant_count, payment_count, status}
+│   ├── splits:      split_id → {participant_count, payment_count, status, expiry_height}
 │   └── split_salts: salt → split_id  (for post-creation lookup)
 │
 └── Transitions
-    ├── create_split(total, count, salt)         → Split + finalize (stores counters)
+    ├── create_split(total, count, salt, expiry) → Split + finalize (stores counters)
     ├── issue_debt(split_record, participant)     → Split + Debt    (NO FINALIZE)
     ├── pay_debt(debt_record, credits_record)     → receipts + finalize (increments counter)
     ├── settle_split(split_record)               → finalize (sets status=1)
+    ├── expire_split(split_id)                   → finalize (sets status=2, checks block height)
     └── verify_split(split_id)                   → finalize (public read)
 ```
 
@@ -126,16 +127,20 @@ Creator                              Participant
 
 ### New in Wave 2 (Feb 11–25, 2026)
 
-**Smart Contract**
-- Deployed `private_split_v1.aleo` on Aleo Testnet
+**Smart Contract v2 (`private_split_v2.aleo`)**
+- Deployed `private_split_v2.aleo` on Aleo Testnet (TX: `at1cvwkh4slx2rcx306kuvdw40nz7czkng3kp8yhx3nt2ghdnwxa5zs5n9u5l`)
 - `issue_debt` transition with NO finalize block — zero on-chain trace
 - 4 record types with zero amounts in public mappings
 - Cryptographic settlement: only record owner can settle (protocol-enforced)
+- NEW: Split expiry system — `expiry_height` stored in mapping, block-height based
+- NEW: `expire_split` transition — anyone can expire a split past its deadline
+- NEW: Expiry enforcement in `pay_debt` finalize — payments rejected after expiry
 - Confirmed on-chain TX: `at1ue3v4t5u9rsmf7h7jnee8dhr6dguda59lrct68j3d4rjhm395vqqhjwcxv`
 
 **Shield Wallet Integration (Wave 2 Mandatory)**
 - Full Shield Wallet support via `@provablehq/aleo-wallet-adaptor-react`
 - Real `credits.aleo/transfer_private` payments (not mocked)
+- NEW: Automatic `transfer_public_to_private` fallback when no private records found
 - 4-strategy split_id retrieval after transaction finalization
 - Robust record matching using structured field parsing
 
@@ -144,26 +149,36 @@ Creator                              Participant
 - Backend encrypts all sensitive fields (addresses + amounts) with AES-256-GCM
 - COOP/COEP headers for WASM isolation (required for Aleo SDK)
 - Zero private data in any finalize scope
+- NEW: Trust model documentation — explains exactly what you trust at each layer
 
-**Frontend — Glassmorphic Design System (Wave 2 Overhaul)**
+**Frontend — Feature-Rich Expense Splitting (Wave 2 Overhaul)**
 - Full UI redesign: glassmorphic dark fintech aesthetic with Inter + JetBrains Mono typography
-- Glassmorphic cards: subtle transparency, border-radius, backdrop blur, soft glows
-- Modern color palette: emerald green (#34d399), cyan (#22d3ee), purple (#a78bfa), amber (#fbbf24)
-- 9 functional pages: Dashboard, Create, Pay, Split Detail, History, Explorer, Verification, Privacy, Connect
-- Status badges with animated pulse indicators (active/settled/pending)
+- NEW: 8 expense categories (Dinner, Groceries, Rent, Travel, Utilities, Entertainment, Shopping, Other) with emoji tags and colored badges
+- NEW: Split expiry selection (1h, 24h, 3d, 7d, 30d, or no expiry)
+- NEW: Token type toggle (ALEO credits / USDCx) — USDCx ready for v2 deployment
+- NEW: My Splits dashboard — personal wallet-filtered view with activity chart, category breakdown, stat cards
+- NEW: Enhanced Explorer — network stats, daily activity chart, category breakdown, recent splits
+- NEW: Receipt export — download JSON receipts for payer or creator
+- NEW: Trust model section on Privacy page
+- 11 functional pages: Dashboard, Create, Pay, Split Detail, My Splits, Explorer, Verification, Privacy, Vision, Docs, Connect
+- Status badges with animated pulse indicators (active/settled/pending/expired)
 - Progress bars on split cards and explorer results
 - QR code generation for payment link sharing
-- Ambient background gradients and staggered page animations
+- Category filters and status filters on split lists
 - On-chain explorer with split ID, salt, and TX hash lookup
 - Receipt verification: scan wallet for PayerReceipt/CreatorReceipt, cross-check on-chain
 - Privacy comparison table (vs Splitwise, Venmo, other ZK apps)
 - Complete data flow diagram showing the full lifecycle
 - Responsive mobile layout with slide-out navigation
 
-**Backend**
+**Backend v2**
 - Node.js + Express + Supabase
 - AES-256-GCM encrypted storage for all sensitive fields
 - REST API for cross-device split recovery
+- NEW: `/api/stats` endpoint — network-wide statistics (total splits, volume, categories, daily activity)
+- NEW: `/api/receipt/:splitId/:type` — receipt export endpoint
+- NEW: Category, expiry, and token type support in split creation
+- NEW: Category and token type filter parameters on split listing
 
 ---
 
@@ -210,15 +225,17 @@ curl https://api.provable.com/v2/testnet/program/private_split_v1.aleo/mapping/s
 │  Live: privatesplit.vercel.app                             │
 │  Shield Wallet via @provablehq/aleo-wallet-adaptor-react   │
 │  Glassmorphic UI: Inter + JetBrains Mono, dark theme       │
+│  11 pages · Categories · Expiry · Token types · Receipts   │
 ├───────────────────────────────────────────────────────────┤
-│  LEO SMART CONTRACT  (private_split_v1.aleo)              │
-│  Aleo Testnet — 5 transitions, 4 records, 2 mappings      │
+│  LEO SMART CONTRACT  (private_split_v1.aleo / v2 ready)   │
+│  Aleo Testnet — 6 transitions, 4 records, 2 mappings      │
 │  Zero amounts in mappings · Zero private data in finalize  │
 │  issue_debt: NO finalize (100% private operation)          │
+│  v2: expiry system, expire_split transition                │
 ├───────────────────────────────────────────────────────────┤
 │  BACKEND  (Node.js + Express + Supabase)                  │
 │  AES-256-GCM encrypted: addresses + amounts               │
-│  REST API for cross-device split recovery                 │
+│  REST API: splits, stats, receipts, cross-device recovery  │
 └───────────────────────────────────────────────────────────┘
 ```
 
@@ -255,13 +272,15 @@ curl https://api.provable.com/v2/testnet/program/private_split_v1.aleo/mapping/s
 
 ## What's Next (Wave 3+)
 
-- USDCx stablecoin support (dual payment method: credits + USDCx)
-- Multi-token payment options
-- Group expense templates (recurring splits)
+- USDCx stablecoin payments via `token_registry.aleo` (UI toggle ready, contract ready)
+- Deploy `private_split_v2.aleo` with full expiry enforcement
+- Group expense templates (recurring splits with saved participant lists)
+- Merchant dashboard with earnings analytics
 - Treasury management for organizations
 - Mobile app (React Native / Expo)
-- Full on-chain transaction history viewer
-- Enhanced receipt export and dispute resolution
+- Multi-payment invoices (pay partial amounts)
+- Dispute resolution system with on-chain evidence
+- Video demo walkthrough
 
 ---
 

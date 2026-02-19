@@ -1,10 +1,21 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TerminalCard, TerminalInput, TerminalButton, TerminalBadge } from '../components/ui';
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
+import { TerminalCard, TerminalInput, TerminalButton, TerminalBadge, CategoryIcon } from '../components/ui';
+import { SplitCard } from '../components/split/SplitCard';
 import { getSplitStatus, getSplitIdFromMapping } from '../utils/aleo-utils';
 import { PROGRAM_ID, TESTNET_API } from '../utils/constants';
-import { PageTransition } from '../components/PageTransition';
-import { Search, Database, ExternalLink, AlertCircle, CheckCircle2, Clock, Shield, Hash, ArrowRight } from 'lucide-react';
+import { api } from '../services/api';
+import type { NetworkStats } from '../services/api';
+import type { Split, SplitCategory } from '../types/split';
+import { CATEGORY_META } from '../types/split';
+import { microToCredits } from '../utils/format';
+import { PageTransition, staggerContainer, fadeInUp } from '../components/PageTransition';
+import {
+  Search, Database, ExternalLink, AlertCircle, CheckCircle2, Clock, Shield, Hash, ArrowRight,
+  TrendingUp, Zap, Users, PieChart as PieChartIcon, Activity, Layers,
+} from 'lucide-react';
 
 interface SplitResult {
   split_id: string;
@@ -45,6 +56,9 @@ export function Explorer() {
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const [historyPage, setHistoryPage] = useState(0);
+  const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
+  const [recentSplits, setRecentSplits] = useState<Split[]>([]);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -52,6 +66,31 @@ export function Explorer() {
     }, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch network stats and recent splits
+  useEffect(() => {
+    setStatsLoading(true);
+    Promise.all([
+      api.getStats().catch(() => null),
+      api.getRecentSplits().catch(() => []),
+    ]).then(([stats, recent]) => {
+      setNetworkStats(stats);
+      setRecentSplits(recent);
+    }).finally(() => setStatsLoading(false));
+  }, []);
+
+  const categoryChartData = networkStats
+    ? Object.entries(networkStats.categories || {}).map(([key, val]) => ({
+        name: CATEGORY_META[key as SplitCategory]?.label || key,
+        icon: CATEGORY_META[key as SplitCategory]?.icon || 'FileText',
+        color: CATEGORY_META[key as SplitCategory]?.color || '#64748b',
+        count: val.count,
+        volume: val.volume,
+      })).sort((a, b) => b.volume - a.volume)
+    : [];
+
+  const activityData = networkStats?.daily_activity || [];
+  const hasActivity = activityData.some((d) => d.count > 0);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -116,6 +155,127 @@ export function Explorer() {
             <p className="text-xs text-white/40 mt-0.5">Verify splits and transactions on-chain</p>
           </div>
         </div>
+
+        {/* Network Stats */}
+        {networkStats && (
+          <>
+            <motion.div
+              className="grid grid-cols-2 md:grid-cols-4 gap-3"
+              variants={staggerContainer}
+              initial="initial"
+              animate="animate"
+            >
+              {[
+                { label: 'Total Splits', value: networkStats.total_splits, icon: Layers, color: 'text-cyan-400', bg: 'rgba(34,211,238,0.10)', border: 'rgba(34,211,238,0.20)' },
+                { label: 'Active', value: networkStats.active, icon: Zap, color: 'text-emerald-400', bg: 'rgba(52,211,153,0.10)', border: 'rgba(52,211,153,0.20)' },
+                { label: 'Total Volume', value: microToCredits(networkStats.total_volume) + ' cr', icon: TrendingUp, color: 'text-amber-400', bg: 'rgba(251,191,36,0.10)', border: 'rgba(251,191,36,0.20)' },
+                { label: 'Participants', value: networkStats.total_participants, icon: Users, color: 'text-purple-400', bg: 'rgba(167,139,250,0.10)', border: 'rgba(167,139,250,0.20)' },
+              ].map((stat) => (
+                <motion.div key={stat.label} variants={fadeInUp}>
+                  <div className="glass-card p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ background: stat.bg, border: `1px solid ${stat.border}` }}
+                      >
+                        <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                      </div>
+                    </div>
+                    <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+                    <p className="text-[10px] text-white/30 tracking-[0.1em] uppercase font-medium mt-0.5">{stat.label}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* Activity Chart + Category Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              <TerminalCard variant="elevated" className="lg:col-span-3">
+                <p className="text-[10px] text-white/30 tracking-[0.12em] uppercase font-medium mb-3">
+                  <Activity className="w-3 h-3 inline mr-1" />Network Activity (10 days)
+                </p>
+                <div className="h-36">
+                  {hasActivity ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={activityData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+                        <XAxis dataKey="date" tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{
+                            background: 'rgba(13,13,20,0.95)',
+                            border: '1px solid rgba(34,211,238,0.2)',
+                            borderRadius: 12,
+                            fontSize: 11,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                          }}
+                          labelStyle={{ color: '#e8e8f0', fontFamily: 'JetBrains Mono' }}
+                          itemStyle={{ color: '#22d3ee' }}
+                        />
+                        <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={28}>
+                          {activityData.map((entry, i) => (
+                            <Cell key={i} fill={entry.count > 0 ? '#22d3ee' : 'rgba(255,255,255,0.03)'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <p className="text-xs text-white/20">No network activity yet</p>
+                    </div>
+                  )}
+                </div>
+              </TerminalCard>
+
+              <TerminalCard variant="elevated" className="lg:col-span-2">
+                <p className="text-[10px] text-white/30 tracking-[0.12em] uppercase font-medium mb-3">
+                  <PieChartIcon className="w-3 h-3 inline mr-1" />Categories
+                </p>
+                {categoryChartData.length > 0 ? (
+                  <div className="space-y-2">
+                    {categoryChartData.map((cat) => (
+                      <div key={cat.name} className="flex items-center gap-2">
+                        <CategoryIcon name={cat.icon} className="w-4 h-4" style={{ color: cat.color }} />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-white/70">{cat.name}</span>
+                            <span className="text-white/40 font-mono">{cat.count}</span>
+                          </div>
+                          <div className="w-full h-1 bg-white/[0.04] rounded-full mt-1 overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${Math.round((cat.volume / Math.max(networkStats.total_volume, 1)) * 100)}%`,
+                                background: cat.color,
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-white/30 font-mono">{microToCredits(cat.volume)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-6 text-center">
+                    <p className="text-xs text-white/20">No category data yet</p>
+                  </div>
+                )}
+              </TerminalCard>
+            </div>
+          </>
+        )}
+
+        {/* Recent Splits */}
+        {recentSplits.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-[10px] text-white/30 tracking-[0.12em] uppercase font-medium">
+              <Clock className="w-3 h-3 inline mr-1" />Recent Network Splits
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {recentSplits.slice(0, 4).map((split) => (
+                <SplitCard key={split.split_id} split={split} showCategory />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Search */}
         <TerminalCard variant="elevated">

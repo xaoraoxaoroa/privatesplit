@@ -30,13 +30,13 @@ const PORT = process.env.PORT || 3001;
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'privatesplit-backend' });
+  res.json({ status: 'ok', service: 'privatesplit-backend', version: '2.0.0' });
 });
 
 // Get all splits (paginated)
 app.get('/api/splits', async (req, res) => {
   try {
-    const { status, limit = 50, offset = 0 } = req.query;
+    const { status, category, token_type, limit = 50, offset = 0 } = req.query;
     let query = supabase
       .from('splits')
       .select('*')
@@ -44,6 +44,8 @@ app.get('/api/splits', async (req, res) => {
       .range(Number(offset), Number(offset) + Number(limit) - 1);
 
     if (status) query = query.eq('status', status);
+    if (category) query = query.eq('category', category);
+    if (token_type) query = query.eq('token_type', token_type);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -92,6 +94,60 @@ app.get('/api/splits/recent', async (req, res) => {
   }
 });
 
+// Get network stats
+app.get('/api/stats', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('splits')
+      .select('*');
+
+    if (error) throw error;
+
+    const splits = (data || []).map(decryptSplit);
+    const active = splits.filter((s) => s.status === 'active').length;
+    const settled = splits.filter((s) => s.status === 'settled').length;
+    const totalVolume = splits.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0);
+    const totalPayments = splits.reduce((sum, s) => sum + (s.payment_count || 0), 0);
+    const totalParticipants = splits.reduce((sum, s) => sum + (s.participant_count || 0), 0);
+
+    // Category breakdown
+    const categories = {};
+    for (const s of splits) {
+      const cat = s.category || 'other';
+      if (!categories[cat]) categories[cat] = { count: 0, volume: 0 };
+      categories[cat].count++;
+      categories[cat].volume += Number(s.total_amount) || 0;
+    }
+
+    // Daily activity (last 10 days)
+    const daily = {};
+    const now = new Date();
+    for (let i = 9; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      daily[key] = 0;
+    }
+    for (const s of splits) {
+      const key = new Date(s.created_at).toISOString().split('T')[0];
+      if (key in daily) daily[key]++;
+    }
+
+    res.json({
+      total_splits: splits.length,
+      active,
+      settled,
+      total_volume: totalVolume,
+      total_payments: totalPayments,
+      total_participants: totalParticipants,
+      categories,
+      daily_activity: Object.entries(daily).map(([date, count]) => ({ date, count })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get single split
 app.get('/api/splits/:splitId', async (req, res) => {
   try {
@@ -121,6 +177,9 @@ app.post('/api/splits', async (req, res) => {
       participant_count,
       salt,
       description,
+      category,
+      expiry_hours,
+      token_type,
       transaction_id,
       participants,
     } = req.body;
@@ -128,11 +187,14 @@ app.post('/api/splits', async (req, res) => {
     const record = {
       split_id,
       creator: encrypt(creator),
-      total_amount: encrypt(String(total_amount)),   // Encrypt financial data
-      per_person: encrypt(String(per_person)),        // Encrypt financial data
+      total_amount: encrypt(String(total_amount)),
+      per_person: encrypt(String(per_person)),
       participant_count,
       salt,
       description: description || '',
+      category: category || 'other',
+      expiry_hours: expiry_hours || 0,
+      token_type: token_type || 'credits',
       status: 'active',
       payment_count: 0,
       transaction_id: transaction_id || '',
@@ -175,9 +237,46 @@ app.patch('/api/splits/:splitId', async (req, res) => {
   }
 });
 
+// Export receipt
+app.get('/api/receipt/:splitId/:type', async (req, res) => {
+  try {
+    const { splitId, type } = req.params;
+    const { data, error } = await supabase
+      .from('splits')
+      .select('*')
+      .eq('split_id', splitId)
+      .single();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Split not found' });
+
+    const split = decryptSplit(data);
+
+    const receipt = {
+      type: type === 'creator' ? 'creator' : 'payer',
+      split_id: split.split_id,
+      description: split.description,
+      category: split.category,
+      amount: split.per_person,
+      total_amount: split.total_amount,
+      participant_count: split.participant_count,
+      token_type: split.token_type || 'credits',
+      status: split.status,
+      created_at: split.created_at,
+      transaction_id: split.transaction_id,
+      verification_url: `https://testnet.explorer.provable.com/program/private_split_v1.aleo`,
+      exported_at: new Date().toISOString(),
+      note: 'This receipt was generated from on-chain data. Verify on the Aleo explorer.',
+    };
+
+    res.json(receipt);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 function decryptSplit(row) {
   if (!row) return row;
-  // Helper: try to decrypt, fall back to raw value (handles legacy unencrypted rows)
   const tryDecrypt = (val) => {
     if (!val) return val;
     try { return decrypt(String(val)); } catch { return val; }
@@ -194,5 +293,5 @@ function decryptSplit(row) {
 }
 
 app.listen(PORT, () => {
-  console.log(`PrivateSplit backend running on port ${PORT}`);
+  console.log(`PrivateSplit backend v2 running on port ${PORT}`);
 });

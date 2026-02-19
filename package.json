@@ -1,0 +1,12 @@
+{
+  "name": "privatesplit",
+  "version": "2.0.0",
+  "type": "module",
+  "private": true,
+  "description": "PrivateSplit — Privacy-first expense splitting on Aleo",
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "cd frontend && npm run build"
+  }
+}

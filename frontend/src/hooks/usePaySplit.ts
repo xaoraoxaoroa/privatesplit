@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react';
 import { TransactionOptions } from '@provablehq/aleo-types';
-import { PROGRAM_ID } from '../utils/constants';
+import { PROGRAM_ID, CREDITS_PROGRAM, DEFAULT_FEE } from '../utils/constants';
 import { getSplitStatus, getSplitIdFromMapping, pollTransaction } from '../utils/aleo-utils';
 import { useUIStore } from '../store/splitStore';
 import { api } from '../services/api';
@@ -175,11 +175,85 @@ export function usePaySplit() {
         } catch { /* ignore */ }
       }
 
+      // Fallback: transfer_public_to_private if no private credits
+      if (!payRecord) {
+        addLog('No private credits found — attempting transfer_public_to_private...', 'warning');
+        setStep('convert');
+
+        try {
+          // Convert enough public credits to private (amount + buffer for fee)
+          const convertAmount = amountNeeded + DEFAULT_FEE;
+          addLog(`Converting ${(convertAmount / 1_000_000).toFixed(6)} public credits to private...`, 'system');
+
+          const convertTx: TransactionOptions = {
+            program: CREDITS_PROGRAM,
+            function: 'transfer_public_to_private',
+            inputs: [address, `${convertAmount}u64`],
+            fee: DEFAULT_FEE,
+            privateFee: false,
+          };
+
+          const convertResult = await executeTransaction(convertTx);
+          const convertTxId = convertResult?.transactionId;
+          addLog(`Conversion TX submitted: ${convertTxId}`, 'success');
+
+          // Poll for conversion confirmation
+          if (convertTxId) {
+            addLog('Waiting for conversion to confirm...', 'system');
+            let convertConfirmed = false;
+
+            if (wallet?.adapter?.transactionStatus) {
+              for (let i = 0; i < 60; i++) {
+                await new Promise((r) => setTimeout(r, 1500));
+                try {
+                  const sRes: any = await wallet.adapter.transactionStatus(convertTxId);
+                  const sStr = (typeof sRes === 'string' ? sRes : sRes?.status || '').toLowerCase();
+                  if (sStr === 'completed' || sStr === 'finalized' || sStr === 'accepted') {
+                    convertConfirmed = true;
+                    break;
+                  }
+                  if (sStr === 'failed' || sStr === 'rejected') throw new Error('Conversion failed');
+                } catch (e: any) {
+                  if (e?.message?.includes('failed') || e?.message?.includes('rejected')) throw e;
+                }
+                if (i % 10 === 0 && i > 0) addLog(`Conversion polling... ${i}/60`, 'info');
+              }
+            } else {
+              convertConfirmed = await pollTransaction(convertTxId, (msg) => addLog(msg, 'info'));
+            }
+
+            if (convertConfirmed) {
+              addLog('Public-to-private conversion confirmed!', 'success');
+              // Wait a moment for record to appear in wallet
+              await new Promise((r) => setTimeout(r, 3000));
+
+              // Re-fetch private credit records
+              try {
+                records = (await requestRecords('credits.aleo')) as any[];
+                for (const r of records || []) {
+                  if (r.spent) continue;
+                  const val = getMicrocreditsFromRecord(r);
+                  if (val > amountNeeded) {
+                    payRecord = r;
+                    addLog(`Found converted credits record: ${val} microcredits`, 'success');
+                    break;
+                  }
+                }
+              } catch { /* ignore */ }
+            } else {
+              addLog('Conversion timed out — try again in a moment', 'warning');
+            }
+          }
+        } catch (convertErr: any) {
+          addLog(`Conversion failed: ${convertErr.message}`, 'error');
+        }
+      }
+
       if (!payRecord) {
         setError(
           `No private credit record with > ${amountNeeded} microcredits. ` +
           `You need ${(amountNeeded / 1_000_000).toFixed(6)} credits. ` +
-          `Convert public credits to private first (use the Aleo faucet or Shield Wallet).`
+          `Ensure you have sufficient public balance and try again.`
         );
         setStep('error');
         return false;
@@ -204,7 +278,7 @@ export function usePaySplit() {
         program: PROGRAM_ID,
         function: 'pay_debt',
         inputs: inputs,
-        fee: 100_000,
+        fee: DEFAULT_FEE,
         privateFee: false,
       };
 

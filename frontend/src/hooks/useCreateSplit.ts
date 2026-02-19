@@ -1,18 +1,21 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react';
 import { TransactionOptions } from '@provablehq/aleo-types';
-import { PROGRAM_ID, TESTNET_API } from '../utils/constants';
+import { PROGRAM_ID, TESTNET_API, DEFAULT_FEE } from '../utils/constants';
 import { creditsToMicro } from '../utils/format';
 import { generateSalt, getSplitIdFromMapping } from '../utils/aleo-utils';
 import { useSplitStore, useUIStore } from '../store/splitStore';
 import { api } from '../services/api';
-import type { Split } from '../types/split';
+import type { Split, SplitCategory, TokenType } from '../types/split';
 
 interface CreateSplitParams {
   description: string;
   amount: string;
   participantCount: number;
   participants: string[];
+  category?: SplitCategory;
+  expiryHours?: number;
+  tokenType?: TokenType;
 }
 
 export function useCreateSplit() {
@@ -35,32 +38,36 @@ export function useCreateSplit() {
     try {
       const microAmount = creditsToMicro(params.amount);
       const salt = generateSalt();
+      const category = params.category || 'other';
+      const expiryHours = params.expiryHours || 0;
+      const tokenType = params.tokenType || 'credits';
 
       addLog(`Amount: ${params.amount} credits (${microAmount} microcredits)`, 'info');
       addLog(`Participants: ${params.participantCount}`, 'info');
+      addLog(`Category: ${category}`, 'info');
+      if (expiryHours > 0) addLog(`Expiry: ${expiryHours} hours`, 'info');
       addLog(`Salt: ${salt.slice(0, 20)}...`, 'info');
 
-      // Prepare inputs — exactly matching Leo function signature:
-      // create_split(total: u64, count: u8, salt: field)
+      // Prepare inputs — matching Leo v2 function signature:
+      // create_split(total_amount: u64, participant_count: u8, salt: field, expiry_hours: u32)
       const inputs: string[] = [
         `${microAmount}u64`,
         `${params.participantCount}u8`,
         salt,
+        `${expiryHours}u32`,
       ];
 
       addLog(`Inputs: [${inputs.map(i => i.slice(0, 30)).join(', ')}]`, 'info');
 
-      // Build transaction matching NullPay's exact pattern
       const transaction: TransactionOptions = {
         program: PROGRAM_ID,
         function: 'create_split',
         inputs: inputs,
-        fee: 100_000,
+        fee: DEFAULT_FEE,
         privateFee: false,
       };
 
       addLog('Requesting transaction execution...', 'system');
-      // TX payload ready
 
       // Execute — this calls Shield Wallet's executeTransaction
       let txId = '';
@@ -72,7 +79,7 @@ export function useCreateSplit() {
       let finalTxId = txId;
       addLog(`Transaction submitted: ${txId}`, 'success');
 
-      // Poll for confirmation using wallet adapter (more reliable than API)
+      // Poll for confirmation
       let hashFromStatus: string | null = null;
 
       if (txId) {
@@ -80,7 +87,6 @@ export function useCreateSplit() {
         let confirmed = false;
         let attempts = 0;
 
-        // Use wallet adapter's transactionStatus if available
         const statusFn = wallet?.adapter?.transactionStatus || transactionStatus;
 
         if (statusFn) {
@@ -94,12 +100,11 @@ export function useCreateSplit() {
                 : statusRes?.status || ''
               ).toLowerCase();
 
-              // Capture final on-chain transaction ID
               if (typeof statusRes === 'object' && (statusRes as any)?.transactionId) {
                 finalTxId = (statusRes as any).transactionId;
               }
 
-              // Strategy 1: Extract split_id from execution outputs (fastest)
+              // Strategy 1: Extract split_id from execution outputs
               const resAny = statusRes as any;
               if (resAny?.execution?.transitions?.[0]?.outputs?.[0]?.value) {
                 hashFromStatus = resAny.execution.transitions[0].outputs[0].value;
@@ -148,16 +153,16 @@ export function useCreateSplit() {
         }
       }
 
-      // Multi-strategy split_id retrieval (4 strategies like NullPay)
+      // Multi-strategy split_id retrieval (4 strategies)
       let splitId: string | null = null;
 
-      // Strategy 1: From transaction status response (already captured above)
+      // Strategy 1: From transaction status response
       if (hashFromStatus) {
         splitId = hashFromStatus.replace(/"/g, '').trim();
         addLog('Split ID retrieved from transaction output', 'success');
       }
 
-      // Strategy 2: On-chain mapping lookup (extended retries — finalize takes time)
+      // Strategy 2: On-chain mapping lookup
       if (!splitId) {
         addLog('Looking up split ID from on-chain mapping...', 'info');
         for (let i = 0; i < 15; i++) {
@@ -203,12 +208,11 @@ export function useCreateSplit() {
         } catch { /* ignore */ }
       }
 
-      // Final fallback: temporary local ID (cannot be used for payments until confirmed on-chain)
+      // Final fallback
       if (!splitId || splitId === 'null' || splitId === 'undefined') {
         splitId = `pending_${salt.slice(0, 20)}`;
         addLog(
-          'Split ID not yet confirmed on-chain. The split is saved locally and will sync once finalized. ' +
-          'You can issue debts once the transaction appears on the explorer.',
+          'Split ID not yet confirmed on-chain. The split is saved locally and will sync once finalized.',
           'warning',
         );
       }
@@ -226,6 +230,9 @@ export function useCreateSplit() {
         issued_count: 0,
         salt,
         description: params.description,
+        category,
+        expiry_hours: expiryHours,
+        token_type: tokenType,
         status: 'active',
         payment_count: 0,
         created_at: new Date().toISOString(),
@@ -248,6 +255,9 @@ export function useCreateSplit() {
         participant_count: params.participantCount,
         salt,
         description: params.description,
+        category,
+        expiry_hours: expiryHours,
+        token_type: tokenType,
         transaction_id: finalTxId || '',
         participants: params.participants.filter(Boolean),
       }).catch((err: any) => addLog(`Backend save failed: ${err.message}`, 'warning'));
@@ -258,7 +268,6 @@ export function useCreateSplit() {
       const msg = err?.message || 'Failed to create split';
       setError(msg);
       addLog(`Error: ${msg}`, 'error');
-      // Create split error handled via state
       return null;
     } finally {
       setLoading(false);

@@ -175,6 +175,62 @@ export function Privacy() {
         </div>
       </TerminalCard>
 
+      {/* Trust Model */}
+      <TerminalCard title="TRUST MODEL">
+        <div className="space-y-5 text-xs">
+          <p className="text-white/50">
+            PrivateSplit is designed to minimize trust requirements. Here's exactly what you're trusting at each layer:
+          </p>
+          {[
+            {
+              title: 'Aleo Protocol (Trustless)',
+              desc: 'ZK proofs are verified by validators. Record encryption and nullifiers are enforced by the protocol. You don\'t trust Aleo — you verify mathematically.',
+              trust: 'None',
+              color: 'rgb(52, 211, 153)',
+              bg: 'rgba(52,211,153,0.08)',
+            },
+            {
+              title: 'Smart Contract (Verified)',
+              desc: 'Our Leo contract is deployed on-chain and its source code is fully auditable. All computations happen inside transitions with ZK proofs. The contract cannot be changed once deployed.',
+              trust: 'Verify once, trust forever',
+              color: 'rgb(34, 211, 238)',
+              bg: 'rgba(34,211,238,0.08)',
+            },
+            {
+              title: 'Frontend (Minimal)',
+              desc: 'The frontend constructs transactions locally and submits them via your wallet. It never sees your private key. Open-source for full auditability.',
+              trust: 'Client-side only',
+              color: 'rgb(167, 139, 250)',
+              bg: 'rgba(167,139,250,0.08)',
+            },
+            {
+              title: 'Backend Indexer (Optional)',
+              desc: 'The backend indexes public mapping data for faster lookups. It stores NO private data — only the same anonymous counters visible on-chain. The app works without it (slower lookups only).',
+              trust: 'Convenience, not security',
+              color: 'rgb(251, 191, 36)',
+              bg: 'rgba(251,191,36,0.08)',
+            },
+            {
+              title: 'Shield Wallet (User Choice)',
+              desc: 'Your wallet holds your private key and signs transactions. PrivateSplit never accesses your private key. You can use any compatible Aleo wallet.',
+              trust: 'Your wallet, your choice',
+              color: 'rgb(236, 72, 153)',
+              bg: 'rgba(236,72,153,0.08)',
+            },
+          ].map((item, i) => (
+            <div key={i} className="rounded-xl p-4" style={{ background: item.bg, border: `1px solid ${item.color}20` }}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-medium" style={{ color: item.color }}>{item.title}</p>
+                <span className="text-[9px] px-2 py-0.5 rounded-full font-medium" style={{ color: item.color, border: `1px solid ${item.color}40` }}>
+                  {item.trust}
+                </span>
+              </div>
+              <p className="text-white/40 leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </TerminalCard>
+
       {/* Technical Details */}
       <TerminalCard title="TECHNICAL DETAILS">
         <div className="space-y-5 text-xs">

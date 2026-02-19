@@ -9,7 +9,7 @@ import { Shield, Menu, X } from 'lucide-react';
 const NAV_ITEMS = [
   { path: '/', label: 'Dashboard' },
   { path: '/create', label: 'Create' },
-  { path: '/history', label: 'My Splits' },
+  { path: '/my-splits', label: 'My Splits' },
   { path: '/explorer', label: 'Explorer' },
   { path: '/privacy', label: 'Privacy' },
   { path: '/verify', label: 'Verify' },
