@@ -5,7 +5,7 @@
 **Live Demo:** https://privatesplit.vercel.app
 **Contract:** `private_split_v2.aleo` on Aleo Testnet (v1 also deployed)
 **Built for:** Aleo Privacy Buildathon by AKINDO — Wave 2
-**GitHub:** https://github.com/Pratiikpy/PrivateSplit
+**GitHub:** https://github.com/xaoraoxaoroa/privatesplit
 
 ---
 
@@ -172,7 +172,7 @@ Creator                              Participant
 - Responsive mobile layout with slide-out navigation
 
 **Backend v2**
-- Vercel Serverless Functions (demo) / Node.js + Express + Supabase (production)
+- Vercel Serverless Functions with Supabase PostgreSQL (in-memory fallback when env vars not set)
 - AES-256-GCM encrypted storage for all sensitive fields
 - REST API for cross-device split recovery
 - NEW: `/api/stats` endpoint — network-wide statistics (total splits, volume, categories, daily activity)
@@ -208,11 +208,11 @@ The Explorer page includes quick-lookup buttons with confirmed on-chain data:
 ### Test with CLI (Advanced)
 
 ```bash
-# Verify split on-chain
-curl https://api.provable.com/v2/testnet/program/private_split_v1.aleo/mapping/splits/{split_id}
+# Verify split on-chain (v2)
+curl https://api.provable.com/v2/testnet/program/private_split_v2.aleo/mapping/splits/{split_id}
 
 # View program on explorer
-# https://testnet.explorer.provable.com/program/private_split_v1.aleo
+# https://testnet.explorer.provable.com/program/private_split_v2.aleo
 ```
 
 ---
@@ -239,7 +239,7 @@ curl https://api.provable.com/v2/testnet/program/private_split_v1.aleo/mapping/s
 └───────────────────────────────────────────────────────────┘
 ```
 
-**Note:** The live demo at privatesplit.vercel.app uses Vercel serverless functions with pre-populated sample data. The production backend (in `/backend/`) uses Supabase PostgreSQL with AES-256-GCM encryption for all sensitive fields.
+**Note:** The Vercel deployment uses serverless functions backed by Supabase PostgreSQL. When `SUPABASE_URL` and `SUPABASE_KEY` env vars are set, all data persists in Supabase. Without them, an in-memory store with demo data is used as fallback.
 
 ---
 
@@ -254,8 +254,8 @@ curl https://api.provable.com/v2/testnet/program/private_split_v1.aleo/mapping/s
 | Typography | Inter (UI) + JetBrains Mono (data) |
 | State | Zustand + localStorage |
 | Wallet | Shield Wallet (primary), Leo, Puzzle, Fox, Soter |
-| Backend | Vercel Serverless (demo) / Express (production) |
-| Database | In-Memory Store (demo) / Supabase (production) |
+| Backend | Vercel Serverless Functions + Supabase |
+| Database | Supabase PostgreSQL (with in-memory fallback) |
 | Encryption | AES-256-GCM |
 | Deployment | Vercel |
 

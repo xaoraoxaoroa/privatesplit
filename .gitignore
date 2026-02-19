@@ -9,4 +9,6 @@ dist/
 aleo-reference-projects/
 contracts/private_split/build/
 contracts/private_split/outputs/
+contracts/private_split_v2/build/
+contracts/private_split_v2/outputs/
 .vercel

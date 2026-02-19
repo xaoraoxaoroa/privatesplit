@@ -138,10 +138,12 @@ export function Dashboard() {
   const chartData = getChartData(mySplits);
 
   useEffect(() => {
+    const controller = new AbortController();
     api.getRecentSplits()
-      .then(setRecentSplits)
+      .then((data) => { if (!controller.signal.aborted) setRecentSplits(data); })
       .catch(() => {})
-      .finally(() => setLoadingRecent(false));
+      .finally(() => { if (!controller.signal.aborted) setLoadingRecent(false); });
+    return () => controller.abort();
   }, []);
 
   // Network stats for landing page

@@ -4,6 +4,9 @@
   "type": "module",
   "private": true,
   "description": "PrivateSplit — Privacy-first expense splitting on Aleo",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0"
+  },
   "scripts": {
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",

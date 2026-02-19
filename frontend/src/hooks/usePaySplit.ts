@@ -75,8 +75,9 @@ export function usePaySplit() {
       // Retry up to 3 times for wallet sync
       for (let attempt = 0; attempt < 3 && !debtRecordInput; attempt++) {
         if (attempt > 0) {
+          const delay = 1000 * Math.pow(2, attempt - 1); // 1s, 2s
           addLog(`Retrying record search (attempt ${attempt + 1}/3)...`, 'info');
-          await new Promise((r) => setTimeout(r, 2500));
+          await new Promise((r) => setTimeout(r, delay));
         }
         try {
           const programRecords = (await requestRecords(PROGRAM_ID)) as any[];

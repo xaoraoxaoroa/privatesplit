@@ -1,11 +1,11 @@
-import { getSplits } from '../_store.js';
+import { getStats } from './_store.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
   try {
-    const splits = await getSplits({ limit: 10, offset: 0 });
-    res.json(splits);
+    const stats = await getStats();
+    res.json(stats);
   } catch (err) {
     console.error('API error:', err);
     res.status(500).json({ error: 'Internal server error' });
