@@ -2,7 +2,41 @@
 
 ## Wave 2 (Feb 11 – Feb 25, 2026)
 
-### New: Smart Contract v2 (`private_split_v2.aleo`)
+### New: Smart Contract v3 (`private_split_v3.aleo`)
+- **Fixed expiry system**: v2 stored relative block count (causing immediate expiry); v3 computes absolute block height in finalize scope using `block.height + (expiry_hours * 360)` — matching NullPay's proven approach
+- Added `token_type` field to `SplitMeta` (u8: 0=credits, 1=USDCx) for multi-token readiness
+- Added `token_type` to Split record for per-split token tracking
+- `create_split` now accepts 5 inputs: `total_amount`, `participant_count`, `salt`, `expiry_hours`, `token_type`
+- Input validation: `token_type <= 1` enforced at contract level
+- Re-enabled expiry options in frontend (1 hour, 6 hours, 24 hours, 3 days, 1 week)
+
+### Selective Disclosure Audit System (New)
+- **`disclose_to_auditor` transition** — creator reveals specific fields to an auditor with ZERO on-chain trace
+- **No finalize block** — not even the fact of disclosure is visible on-chain
+- **Bitmask-based field selection** — 5 disclosable fields (total_amount, per_person, participant_count, issued_count, token_type)
+- **DisclosureReceipt record** — encrypted to auditor, only they can decrypt it
+- **ZK proof guarantees** — Aleo proof proves disclosed values came from a real Split record
+- **Privacy advantage over competitors** — 0 public mappings vs 11+ in traditional approaches
+- **Frontend Audit page** (`/audit`) — full UI for selecting splits, fields, and auditor address
+- **`useDisclose` hook** — handles wallet record lookup, transaction execution, and confirmation polling
+- **5 new Leo contract tests** (tests 13-17): field mask bits, mask bounds, selective reveal, all-fields mask, DisclosureReceipt construction
+
+### Test Suite (New)
+- **17 Leo contract tests** covering: hash determinism, per-person calculation, participant bounds, max debts, salt uniqueness, integer division truncation, token type bounds, expiry blocks, SplitMeta construction, status values, large amounts, minimum splits, field mask bits, selective reveal, disclosure receipt
+- **53 Vitest frontend tests** across 3 test files:
+  - `format.test.ts` — microToCredits, creditsToMicro, truncateAddress, statusLabel, generateId
+  - `record-utils.test.ts` — extractField, parseRecordFields, isSplitRecord, isDebtRecord, recordMatchesSplitContext, getMicrocreditsFromRecord, buildCreditsRecordPlaintext, getRecordInput
+  - `aleo-utils.test.ts` — generateSalt, formatAleoInput
+- All 53 tests passing
+
+### Multi-Version Program Support
+- Frontend now searches v3 → v2 → v1 programs for records (backward compatible with all deployed contracts)
+- On-chain mapping queries (`getSplitIdFromMapping`, `getSplitStatus`) try all program versions
+- Record extraction uses best-available candidate across all program versions
+
+### Previous v2 Improvements (carried forward)
+
+#### Smart Contract v2 (`private_split_v2.aleo`)
 - Upgraded from `private_split_v1.aleo` to `private_split_v2.aleo`
 - Added `expiry_height` field to Split record for future expiry enforcement
 - `create_split` now accepts 4 inputs (added `expiry_hours: u32`)

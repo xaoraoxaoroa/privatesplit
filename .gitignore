@@ -11,4 +11,11 @@ contracts/private_split/build/
 contracts/private_split/outputs/
 contracts/private_split_v2/build/
 contracts/private_split_v2/outputs/
+contracts/private_split_v3/build/
+contracts/private_split_v3/outputs/
 .vercel
+
+# Personal / Claude Code files
+CLAUDE.md
+FULL_AUDIT_AND_FIX_PROMPT.md
+INFO_DATA.md

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react';
 import { TransactionOptions } from '@provablehq/aleo-types';
-import { PROGRAM_ID, PROGRAM_ID_V1, CREDITS_PROGRAM, DEFAULT_FEE } from '../utils/constants';
+import { PROGRAM_ID, PROGRAM_ID_V2, PROGRAM_ID_V1, CREDITS_PROGRAM, DEFAULT_FEE } from '../utils/constants';
 import { getSplitStatus, getSplitIdFromMapping, pollTransaction } from '../utils/aleo-utils';
 import { useUIStore } from '../store/splitStore';
 import { api } from '../services/api';
@@ -76,13 +76,13 @@ export function usePaySplit() {
       const debtCandidates: { input: any; program: string }[] = [];
 
       // Try both v2 and v1 programs (debt may have been issued on either)
-      const programsToCheck = [PROGRAM_ID, PROGRAM_ID_V1];
+      const programsToCheck = [PROGRAM_ID, PROGRAM_ID_V2, PROGRAM_ID_V1];
 
       for (const progId of programsToCheck) {
         if (debtRecordInput) break;
-        // Skip v1 if we already have v2 candidates
-        if (progId === PROGRAM_ID_V1 && debtCandidates.length > 0) {
-          addLog(`Skipping ${PROGRAM_ID_V1} — using v2 candidates`, 'info');
+        // Skip older versions if we already have candidates from newer ones
+        if (progId !== PROGRAM_ID && debtCandidates.length > 0) {
+          addLog(`Skipping ${progId} — using newer version candidates`, 'info');
           break;
         }
 

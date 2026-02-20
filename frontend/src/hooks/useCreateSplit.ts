@@ -48,13 +48,15 @@ export function useCreateSplit() {
       if (expiryHours > 0) addLog(`Expiry: ${expiryHours} hours`, 'info');
       addLog(`Salt: ${salt.slice(0, 20)}...`, 'info');
 
-      // Prepare inputs — matching Leo v2 function signature:
-      // create_split(total_amount: u64, participant_count: u8, salt: field, expiry_hours: u32)
+      // Prepare inputs — matching Leo v3 function signature:
+      // create_split(total_amount: u64, participant_count: u8, salt: field, expiry_hours: u32, token_type: u8)
+      const tokenTypeNum = tokenType === 'usdcx' ? 1 : 0;
       const inputs: string[] = [
         `${microAmount}u64`,
         `${params.participantCount}u8`,
         salt,
         `${expiryHours}u32`,
+        `${tokenTypeNum}u8`,
       ];
 
       addLog(`Inputs: [${inputs.map(i => i.slice(0, 30)).join(', ')}]`, 'info');

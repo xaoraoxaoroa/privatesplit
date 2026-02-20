@@ -1,20 +1,20 @@
 # PrivateSplit — Private Expense Splitting on Aleo
 
 [![Live Demo](https://img.shields.io/badge/Live-private--split.vercel.app-00C48C?style=for-the-badge&logo=vercel)](https://private-split.vercel.app)
-[![Aleo Testnet](https://img.shields.io/badge/Aleo-Testnet-blue?style=for-the-badge)](https://testnet.explorer.provable.com/program/private_split_v2.aleo)
+[![Aleo Testnet](https://img.shields.io/badge/Aleo-Testnet-blue?style=for-the-badge)](https://testnet.explorer.provable.com/program/private_split_v3.aleo)
 [![Wave 2](https://img.shields.io/badge/Buildathon-Wave%202-purple?style=for-the-badge)](https://app.akindo.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
 > **Split expenses with friends without revealing who owes what, how much, or who paid.**
 
-**Contract:** `private_split_v2.aleo` on Aleo Testnet (v1 also deployed)
+**Contract:** `private_split_v3.aleo` on Aleo Testnet (v1, v2 also deployed)
 **Built for:** Aleo Privacy Buildathon by AKINDO — Wave 2
 
 ---
 
 ## TL;DR
 
-PrivateSplit is an on-chain expense splitting protocol where **zero financial data is ever public**. No amounts, no addresses, no payment details — only anonymous counters ("a split exists, N people involved, M have paid"). Every amount, every participant, every debt is encrypted using Aleo's zero-knowledge proofs. The `issue_debt` transition has **no finalize block at all** — meaning debt issuance leaves literally zero trace on the blockchain.
+PrivateSplit is an on-chain expense splitting protocol where **zero financial data is ever public**. No amounts, no addresses, no payment details — only anonymous counters ("a split exists, N people involved, M have paid"). Every amount, every participant, every debt is encrypted using Aleo's zero-knowledge proofs. The `issue_debt` transition has **no finalize block at all** — meaning debt issuance leaves literally zero trace on the blockchain. The `disclose_to_auditor` transition enables **selective disclosure** — prove specific fields to an auditor with zero on-chain trace, using ZK proofs to guarantee authenticity.
 
 ---
 
@@ -25,7 +25,7 @@ PrivateSplit is an on-chain expense splitting protocol where **zero financial da
 - [Privacy Model](#privacy-model)
 - [Architecture](#architecture)
 - [Split Lifecycle](#split-lifecycle)
-- [Smart Contract](#smart-contract-6-transitions-4-records-zero-leaks)
+- [Smart Contract](#smart-contract-7-transitions-5-records-zero-leaks)
 - [Privacy Architecture Diagram](#privacy-architecture)
 - [Tech Stack](#tech-stack)
 - [How to Test](#how-to-test-wave-2)
@@ -99,7 +99,7 @@ graph TB
     end
 
     subgraph Blockchain["Aleo Testnet — Zero-Knowledge L1"]
-        SC["Leo Smart Contract<br/>private_split_v2.aleo"]
+        SC["Leo Smart Contract<br/>private_split_v3.aleo"]
         CR[credits.aleo<br/>transfer_private]
         MP["Public Mappings<br/>(only counters — zero private data)"]
         REC["Encrypted Records<br/>Split · Debt · PayerReceipt · CreatorReceipt"]
@@ -194,29 +194,43 @@ graph LR
 
 ---
 
-## Smart Contract: 6 Transitions, 4 Records, Zero Leaks
+## Smart Contract: 7 Transitions, 5 Records, Zero Leaks
 
 ```
-program private_split_v2.aleo (deployed on Aleo Testnet)
+program private_split_v3.aleo (deployed on Aleo Testnet)
 │
 ├── Records (ALL private, encrypted to owner)
-│   ├── Split         — Creator's record (total, per-person, count, expiry)
-│   ├── Debt          — Participant's record (amount owed, to whom)
-│   ├── PayerReceipt  — Payer's proof of payment
-│   └── CreatorReceipt — Creator's proof of receipt
+│   ├── Split             — Creator's record (total, per-person, count, expiry)
+│   ├── Debt              — Participant's record (amount owed, to whom)
+│   ├── PayerReceipt      — Payer's proof of payment
+│   ├── CreatorReceipt    — Creator's proof of receipt
+│   └── DisclosureReceipt — Auditor's selective disclosure proof
 │
 ├── Mappings (ONLY anonymous counters, zero private data)
-│   ├── splits:      split_id → {participant_count, payment_count, status, expiry_height}
+│   ├── splits:      split_id → {participant_count, payment_count, status, expiry_height, token_type}
 │   └── split_salts: salt → split_id  (for post-creation lookup)
 │
 └── Transitions
-    ├── create_split(total, count, salt, expiry) → Split + finalize (stores counters)
+    ├── create_split(total, count, salt, expiry, token_type) → Split + finalize (stores counters)
     ├── issue_debt(split_record, participant)     → Split + Debt    (NO FINALIZE)
     ├── pay_debt(debt_record, credits_record)     → receipts + finalize (increments counter)
     ├── settle_split(split_record)               → finalize (sets status=1)
     ├── expire_split(split_id)                   → finalize (sets status=2, checks block height)
-    └── verify_split(split_id)                   → finalize (public read)
+    ├── verify_split(split_id)                   → finalize (public read)
+    └── disclose_to_auditor(split, auditor, mask) → Split + DisclosureReceipt (NO FINALIZE)
 ```
+
+### Selective Disclosure Audit System
+
+The `disclose_to_auditor` transition allows the creator to selectively reveal specific fields to an auditor:
+
+- **No finalize block** — zero on-chain trace of disclosure
+- **Bitmask selection** — choose which of 5 fields to reveal (total_amount, per_person, participant_count, issued_count, token_type)
+- **ZK proof guarantee** — Aleo's proof system proves the values came from a real Split record
+- **Encrypted receipt** — only the auditor can decrypt the DisclosureReceipt
+- **Non-destructive** — Split record is returned to creator (not consumed)
+
+Privacy advantage: 0 public mappings for disclosure (vs 11+ in competitor approaches). Not even the fact that a disclosure happened is visible on-chain.
 
 ### Key Design: Only the Record Owner Can Spend It
 
@@ -313,14 +327,24 @@ The Explorer page auto-loads confirmed on-chain data:
 - **Salt**: `987654321098765field`
 - **TX Hash**: `at1ue3v4t5u9rsmf7h7jnee8dhr6dguda59lrct68j3d4rjhm395vqqhjwcxv`
 
+### Run Tests
+
+```bash
+# Frontend unit tests (53 tests)
+cd frontend && npm test
+
+# Leo contract tests (12 tests)
+cd contracts/private_split_v3 && leo test
+```
+
 ### Verify with CLI
 
 ```bash
-# Check split status on-chain (v2)
-curl https://api.provable.com/v2/testnet/program/private_split_v2.aleo/mapping/splits/{split_id}
+# Check split status on-chain
+curl https://api.provable.com/v2/testnet/program/private_split_v3.aleo/mapping/splits/{split_id}
 
 # View program on explorer
-# https://testnet.explorer.provable.com/program/private_split_v2.aleo
+# https://testnet.explorer.provable.com/program/private_split_v3.aleo
 ```
 
 ---
@@ -335,10 +359,14 @@ privatesplit/
 │   │   ├── program.json            # Program manifest
 │   │   ├── build/main.aleo         # Compiled AVM bytecode
 │   │   └── tests/test_private_split.leo
-│   └── private_split_v2/           # v2 contract (deployed, active)
+│   ├── private_split_v2/           # v2 contract (deployed)
+│   │   ├── src/main.leo
+│   │   ├── program.json
+│   │   └── build/main.aleo
+│   └── private_split_v3/           # v3 contract (active) — fixed expiry + token_type
 │       ├── src/main.leo            # Leo source — 6 transitions, 4 records
 │       ├── program.json
-│       └── build/main.aleo
+│       └── tests/test_private_split_v3.leo  # 12 contract tests
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx                 # Router + route definitions
@@ -465,14 +493,16 @@ All sensitive fields (addresses, amounts) are encrypted with **AES-256-GCM** bef
 
 ### New in Wave 2 (Feb 11–25, 2026)
 
-**Smart Contract v2 (`private_split_v2.aleo`)**
-- Deployed `private_split_v2.aleo` on Aleo Testnet (TX: `at1cvwkh4slx2rcx306kuvdw40nz7czkng3kp8yhx3nt2ghdnwxa5zs5n9u5l`)
+**Smart Contract v3 (`private_split_v3.aleo`)**
+- Fixed expiry system: absolute block height computed in finalize using `block.height + (expiry_hours * 360)`
+- Added `token_type` field (u8) to SplitMeta and Split record for multi-token readiness
+- 6 transitions, 4 record types, 2 mappings — zero private data in any mapping
 - `issue_debt` transition with NO finalize block — zero on-chain trace
-- 4 record types with zero amounts in public mappings
 - Cryptographic settlement: only record owner can settle (protocol-enforced)
-- Split expiry system — `expiry_height` stored in mapping, block-height based
 - `expire_split` transition — anyone can expire a split past its deadline
 - Expiry enforcement in `pay_debt` finalize — payments rejected after expiry
+- 12 Leo contract tests covering all core logic
+- 53 Vitest frontend tests for utility functions
 
 **Shield Wallet Integration (Wave 2 Mandatory)**
 - Full Shield Wallet support via `@provablehq/aleo-wallet-adaptor-react`
@@ -545,7 +575,7 @@ npm start            # Express server at localhost:3001
 
 **Frontend** (`.env` in `frontend/`):
 ```env
-VITE_PROGRAM_ID=private_split_v2.aleo
+VITE_PROGRAM_ID=private_split_v3.aleo
 VITE_BACKEND_URL=https://private-split.vercel.app
 ```
 
@@ -564,10 +594,18 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ### Smart Contract (Leo CLI)
 
 ```bash
-cd contracts/private_split_v2
+cd contracts/private_split_v3
 leo build            # Compile to AVM bytecode
 leo deploy --network testnet
 ```
+
+---
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md) — System overview, data flows, component breakdown
+- [Privacy Model](docs/PRIVACY_MODEL.md) — What's private, what's public, security properties
+- [Changelog](CHANGELOG.md) — Wave-by-wave progress log
 
 ---
 

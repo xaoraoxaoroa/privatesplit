@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { path: '/explorer', label: 'Explorer' },
   { path: '/privacy', label: 'Privacy' },
   { path: '/verify', label: 'Verify' },
+  { path: '/audit', label: 'Audit' },
   { path: '/vision', label: 'Vision' },
   { path: '/docs', label: 'Docs' },
 ];

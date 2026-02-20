@@ -1,0 +1,16 @@
+{
+  "program": "private_split_v3.aleo",
+  "version": "0.3.0",
+  "description": "PrivateSplit v3 — Fixed expiry (absolute block height), token type tracking, privacy-first expense splitting",
+  "license": "MIT",
+  "leo": "3.4.0",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "path": null,
+      "edition": null
+    }
+  ],
+  "dev_dependencies": []
+}

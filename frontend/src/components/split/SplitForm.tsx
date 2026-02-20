@@ -238,7 +238,7 @@ export function SplitForm({ onSubmit, loading }: SplitFormProps) {
               </div>
               {tokenType === 'usdcx' && (
                 <p className="text-amber-400/60 text-[9px] mt-1.5 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> USDCx support coming soon (Wave 3)
+                  <AlertCircle className="w-3 h-3" /> USDCx payment integration in progress
                 </p>
               )}
             </div>

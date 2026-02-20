@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react';
 import { TransactionOptions } from '@provablehq/aleo-types';
-import { PROGRAM_ID, PROGRAM_ID_V1 } from '../utils/constants';
+import { PROGRAM_ID, PROGRAM_ID_V2, PROGRAM_ID_V1 } from '../utils/constants';
 import { pollTransaction } from '../utils/aleo-utils';
 import { useSplitStore, useUIStore } from '../store/splitStore';
 import { isSplitRecord, recordMatchesSplitContext, getRecordInput } from '../utils/record-utils';
@@ -29,15 +29,15 @@ export function useIssueDebt() {
       let resolvedProgram = PROGRAM_ID;
 
       // Try both v2 and v1 programs (split may have been created on either)
-      const programsToCheck = [PROGRAM_ID, PROGRAM_ID_V1];
+      const programsToCheck = [PROGRAM_ID, PROGRAM_ID_V2, PROGRAM_ID_V1];
 
       // Collect all unspent record inputs from both programs
       const candidates: { input: any; program: string }[] = [];
 
       for (const programId of programsToCheck) {
-        // Skip v1 if we already have v2 candidates (v2 is preferred)
-        if (programId === PROGRAM_ID_V1 && candidates.length > 0) {
-          addLog(`Skipping ${PROGRAM_ID_V1} — using v2 candidates`, 'info');
+        // Skip older versions if we already have candidates from newer ones
+        if (programId !== PROGRAM_ID && candidates.length > 0) {
+          addLog(`Skipping ${programId} — using newer version candidates`, 'info');
           break;
         }
 
