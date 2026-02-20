@@ -8,10 +8,10 @@ import { useSettleSplit } from '../hooks/useSettleSplit';
 import { useIssueDebt } from '../hooks/useIssueDebt';
 import { microToCredits, truncateAddress } from '../utils/format';
 import { CATEGORY_META, TOKEN_META } from '../types/split';
-import type { SplitCategory } from '../types/split';
+import type { SplitCategory, Split } from '../types/split';
 import { api } from '../services/api';
 import { EXPLORER_URL } from '../utils/constants';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { PageTransition } from '../components/PageTransition';
 import { CategoryIcon } from '../components/ui';
@@ -24,10 +24,47 @@ export function SplitDetail() {
   const { data: onChainStatus, refresh, loading: statusLoading } = useSplitStatus(hash);
   const { settleSplit, loading: settleLoading } = useSettleSplit();
   const { issueDebt, loading: issueLoading } = useIssueDebt();
+  const updateSplit = useSplitStore((s) => s.updateSplit);
   const logs = useUIStore((s) => s.logs);
   const [copied, setCopied] = useState(false);
   const [issuingTo, setIssuingTo] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
+
+  // Sync on-chain payment status back to local store
+  useEffect(() => {
+    if (!onChainStatus || !hash) return;
+    const current = useSplitStore.getState().getSplit(hash);
+    if (!current) return;
+
+    const updates: Partial<Split> = {};
+
+    if (onChainStatus.payment_count !== current.payment_count) {
+      updates.payment_count = onChainStatus.payment_count;
+    }
+
+    if (onChainStatus.status === 1 && current.status !== 'settled') {
+      updates.status = 'settled';
+    } else if (onChainStatus.status === 2 && current.status !== 'expired') {
+      updates.status = 'expired';
+    }
+
+    // Mark participants as paid when on-chain confirms all payments received
+    const expectedPayments = Math.max(onChainStatus.participant_count - 1, 1);
+    if (onChainStatus.payment_count >= expectedPayments && current.participants) {
+      const anyUnpaid = current.participants.some(
+        (p) => p.address !== current.creator && !p.paid,
+      );
+      if (anyUnpaid) {
+        updates.participants = current.participants.map((p) =>
+          p.address !== current.creator ? { ...p, paid: true } : p,
+        );
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updateSplit(hash, updates);
+    }
+  }, [onChainStatus, hash, updateSplit]);
 
   if (!split) {
     return (

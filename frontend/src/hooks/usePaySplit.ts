@@ -3,7 +3,7 @@ import { useWallet } from '@provablehq/aleo-wallet-adaptor-react';
 import { TransactionOptions } from '@provablehq/aleo-types';
 import { PROGRAM_ID, PROGRAM_ID_V2, PROGRAM_ID_V1, CREDITS_PROGRAM, DEFAULT_FEE } from '../utils/constants';
 import { getSplitStatus, getSplitIdFromMapping, pollTransaction } from '../utils/aleo-utils';
-import { useUIStore } from '../store/splitStore';
+import { useUIStore, useSplitStore } from '../store/splitStore';
 import { api } from '../services/api';
 import {
   isDebtRecord,
@@ -381,9 +381,20 @@ export function usePaySplit() {
           addLog('Payment confirmed on-chain!', 'success');
           setStep('success');
           if (splitId) {
-            api.updateSplit(splitId, {
-              payment_count: (await getSplitStatus(splitId))?.payment_count || 1,
-            }).catch(() => {});
+            const latestStatus = await getSplitStatus(splitId);
+            const newPaymentCount = latestStatus?.payment_count || 1;
+            api.updateSplit(splitId, { payment_count: newPaymentCount }).catch(() => {});
+            // Sync to local store: update payment_count and mark this payer as paid
+            const localSplit = useSplitStore.getState().getSplit(splitId);
+            if (localSplit) {
+              const updates: Record<string, any> = { payment_count: newPaymentCount };
+              if (localSplit.participants && address) {
+                updates.participants = localSplit.participants.map((p) =>
+                  p.address === address ? { ...p, paid: true } : p,
+                );
+              }
+              useSplitStore.getState().updateSplit(splitId, updates);
+            }
           }
           return true;
         } else {
